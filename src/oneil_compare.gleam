@@ -1,103 +1,41 @@
-import gleam/int
 import gleam/io
-import gleam/string
 
-import shellout
+import compare
+import print
+import process
+import run
 
 pub fn main() -> Nil {
-  let #(old_output, new_output) = get_regression_output()
+  // get the output from running the old and new versions of Oneil
+  io.print("running old Oneil ... ")
+  let old_output = run.run_old()
+  io.println("done")
 
-  let #(old_params, old_tests) = process_old_output(old_output)
-  let #(new_params, new_tests) = process_new_output(new_output)
+  io.print("running new Oneil ... ")
+  let new_output = run.run_new()
+  io.println("done")
 
-  let diff_params = compare_params(old_params, new_params)
-  let diff_tests = compare_tests(old_tests, new_tests)
+  // process the output to get the params and tests
+  io.print("processing old output ... ")
+  let #(old_params, old_tests) = process.process_old_output(old_output)
+  io.println("done")
 
-  io.println("Diff params: " <> diff_params)
-  io.println("Diff tests: " <> diff_tests)
+  io.print("processing new output ... ")
+  let #(new_params, new_tests) = process.process_new_output(new_output)
+  io.println("done")
+
+  // compare the params and tests
+  io.print("comparing params ... ")
+  let diff_params = compare.compare_params(old_params, new_params)
+  io.println("done")
+
+  io.print("comparing tests ... ")
+  let diff_tests = compare.compare_tests(old_tests, new_tests)
+  io.println("done")
+
+  // print out the results
+  print.print_diff("params", diff_params)
+  print.print_diff("tests", diff_tests)
 
   Nil
-}
-
-fn get_regression_output() -> #(String, String) {
-  let old_output = run_old_regression()
-  let new_output = run_new_regression()
-
-  #(old_output, new_output)
-}
-
-fn run_old_regression() -> String {
-  let old_location = "../veery_old"
-  let command =
-    "source .venv/bin/activate && "
-    <> "cd model && "
-    <> "oneil regression-test radar.on"
-
-  run_command(command, old_location)
-}
-
-fn run_new_regression() -> String {
-  let new_location = "../veery"
-
-  let command =
-    "source .venv/bin/activate && "
-    <> "cd model && "
-    <> "oneil eval radar.on --print-mode all --no-header --no-test-report && "
-    <> "oneil test radar.on --no-header --recursive"
-
-  run_command(command, new_location)
-}
-
-fn run_command(command: String, location: String) -> String {
-  let result =
-    shellout.command(
-      run: "sh",
-      with: [
-        "-c",
-        command,
-      ],
-      in: location,
-      opt: [],
-    )
-
-  let output = case result {
-    Ok(output) -> output
-    Error(#(error_code, output)) -> {
-      panic as {
-        "Failed to run command (error code: "
-        <> int.to_string(error_code)
-        <> "):\n"
-        <> output
-        <> "\n"
-        <> "Command: "
-        <> command
-        <> "\n"
-        <> "Location: "
-        <> location
-        <> "\n"
-      }
-    }
-  }
-
-  // remove ANSI escape codes
-  output
-  |> string.replace(each: "\u{001b}[0m", with: "")
-  |> string.replace(each: "\u{001b}[91m", with: "")
-  |> string.replace(each: "\u{001b}[92m", with: "")
-}
-
-fn process_old_output(output: String) -> #(String, String) {
-  todo as "process old output and return params and tests"
-}
-
-fn process_new_output(output: String) -> #(String, String) {
-  todo as "process new output and return params and tests"
-}
-
-fn compare_params(old_params: String, new_params: String) -> String {
-  todo as "compare params and return diff"
-}
-
-fn compare_tests(old_tests: String, new_tests: String) -> String {
-  todo as "compare tests and return diff"
 }
