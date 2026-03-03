@@ -13,6 +13,12 @@ import parse.{
 
 const indent_amount = 2
 
+pub fn print_error(error: String) -> Nil {
+  { "\nerror: " <> error }
+  |> red()
+  |> io.println_error()
+}
+
 type DiffSummary {
   DiffSummary(added: Int, removed: Int, changed: Int)
 }
