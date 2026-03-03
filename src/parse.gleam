@@ -125,7 +125,9 @@ fn parse_old_test_dependency_param(
 
   let name = name |> string.trim()
 
-  let #(value, unit) = case rest |> string.split_once(on: " ") {
+  let #(value, unit) = case
+    rest |> string.trim_start() |> string.split_once(on: " ")
+  {
     Ok(#(value, unit)) -> #(value |> string.trim(), Ok(unit |> string.trim()))
     Error(Nil) -> #(rest |> string.trim(), Error(Nil))
   }
