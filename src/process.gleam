@@ -13,6 +13,7 @@ pub type ParamValue {
   Scalar(value: Float)
   EmptyInterval
   Interval(min: Float, max: Float)
+  String(value: String)
 }
 
 pub type Test {
@@ -46,6 +47,11 @@ pub fn process_old_output(output: String) -> #(List(Param), List(Test)) {
 }
 
 fn parse_old_param(line: String) -> Param {
+  case line |> string.contains("ICW") {
+    True -> io.println(line)
+    False -> Nil
+  }
+
   let assert Ok(#(name, rest)) = line |> string.split_once(on: ":")
   let name = name |> string.trim()
 
@@ -205,24 +211,25 @@ fn parse_param_value(value: String) -> ParamValue {
 
   case try_interval {
     Ok(#(min, max)) -> {
+      let min = min |> string.trim() |> float.parse()
+      let max = max |> string.trim() |> float.parse()
+
       case min, max {
-        "none", "none" -> EmptyInterval
-        _, _ -> {
-          let assert Ok(min) = min |> string.trim() |> float.parse()
-          let assert Ok(max) = max |> string.trim() |> float.parse()
-          Interval(min: min, max: max)
-        }
+        Ok(min), Ok(max) -> Interval(min: min, max: max)
+        Error(Nil), Error(Nil) if min == max -> String(value: value)
+        _, _ -> panic as { "invalid interval: " <> value }
       }
     }
 
     Error(Nil) -> {
       let value = value |> string.trim()
       case value {
-        "none" -> NaN
         "<empty>" -> EmptyInterval
         _ -> {
-          let assert Ok(value) = value |> float.parse()
-          Scalar(value: value)
+          case value |> float.parse() {
+            Ok(value) -> Scalar(value: value)
+            Error(Nil) -> String(value: value)
+          }
         }
       }
     }
