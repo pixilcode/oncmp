@@ -15,10 +15,9 @@ pub type Param {
 }
 
 pub type ParamValue {
-  NaN
   Scalar(value: Float)
-  EmptyInterval
   Interval(min: Float, max: Float)
+  EmptyInterval
   String(value: String)
 }
 

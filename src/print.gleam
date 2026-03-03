@@ -7,7 +7,7 @@ import gleam/string
 import diff.{type Diff, Different, NewOnly, OldOnly, Same}
 import parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
-  EmptyInterval, Fail, Interval, NaN, Pass, Scalar, String,
+  EmptyInterval, Fail, Interval, Pass, Scalar, String,
 }
 
 const indent_amount = 2
@@ -130,7 +130,6 @@ fn print_diff(
 
 fn value_to_string(value: ParamValue) -> String {
   case value {
-    NaN -> "NaN"
     Scalar(value) -> float.to_string(value)
     EmptyInterval -> "<empty>"
     Interval(min, max) -> float.to_string(min) <> " | " <> float.to_string(max)
