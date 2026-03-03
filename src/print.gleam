@@ -1,7 +1,7 @@
-import gleam/dict.{type Dict}
 import gleam/float
 import gleam/io
 import gleam/list
+import gleam/order
 import gleam/string
 
 import diff.{type Diff, Different, NewOnly, OldOnly, Same}
@@ -12,8 +12,15 @@ import parse.{
 
 const indent_amount = 2
 
-pub fn print_params_diff(diffs: Dict(String, Diff(Param))) -> Nil {
-  print_diff(diffs, param_to_string)
+pub fn print_params_diff(diffs: List(Diff(Param))) -> Nil {
+  print_diff(diffs, param_compare, param_to_string)
+}
+
+fn param_compare(param1: Diff(Param), param2: Diff(Param)) -> order.Order {
+  let name1 = diff.calc_from_diff(param1, fn(param) { param.name })
+  let name2 = diff.calc_from_diff(param2, fn(param) { param.name })
+
+  string.compare(name1, name2)
 }
 
 fn param_to_string(param: Param) -> String {
@@ -27,8 +34,18 @@ fn param_to_string(param: Param) -> String {
   param.name <> " = " <> value <> unit <> "  # " <> param.description
 }
 
-pub fn print_tests_diff(diffs: Dict(String, Diff(Test))) -> Nil {
-  print_diff(diffs, test_to_string)
+pub fn print_tests_diff(diffs: List(Diff(Test))) -> Nil {
+  print_diff(diffs, test_compare, test_to_string)
+}
+
+fn test_compare(test1: Diff(Test), test2: Diff(Test)) -> order.Order {
+  let model1 = diff.calc_from_diff(test1, fn(test_) { test_.model })
+  let model2 = diff.calc_from_diff(test2, fn(test_) { test_.model })
+  let expression1 = diff.calc_from_diff(test1, fn(test_) { test_.expression })
+  let expression2 = diff.calc_from_diff(test2, fn(test_) { test_.expression })
+
+  string.compare(model1, model2)
+  |> order.lazy_break_tie(fn() { string.compare(expression1, expression2) })
 }
 
 fn test_to_string(test_: Test) -> String {
@@ -67,12 +84,14 @@ fn test_dependency_param_to_string(param: TestDependencyParam) -> String {
   "- " <> param.name <> " = " <> value <> unit
 }
 
-fn print_diff(diffs: Dict(String, Diff(a)), to_string: fn(a) -> String) -> Nil {
+fn print_diff(
+  diffs: List(Diff(a)),
+  compare: fn(Diff(a), Diff(a)) -> order.Order,
+  to_string: fn(a) -> String,
+) -> Nil {
   diffs
-  |> dict.to_list()
-  |> list.sort(by: fn(diff1, diff2) { string.compare(diff1.0, diff2.0) })
+  |> list.sort(by: fn(diff1, diff2) { compare(diff1, diff2) })
   |> list.each(fn(diff) {
-    let #(_name, diff) = diff
     case diff {
       OldOnly(a) -> {
         to_string(a)

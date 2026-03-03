@@ -1,4 +1,4 @@
-import gleam/dict.{type Dict}
+import gleam/dict
 import gleam/list
 
 import parse.{type Param, type Test}
@@ -10,10 +10,21 @@ pub type Diff(a) {
   NewOnly(a)
 }
 
+pub fn calc_from_diff(diff: Diff(a), f: fn(a) -> b) -> b {
+  let a = case diff {
+    OldOnly(a) -> a
+    Same(a) -> a
+    Different(a, _) -> a
+    NewOnly(a) -> a
+  }
+
+  f(a)
+}
+
 pub fn diff_params(
   old_params: List(Param),
   new_params: List(Param),
-) -> Dict(String, Diff(Param)) {
+) -> List(Diff(Param)) {
   let old_params_dict =
     old_params
     |> list.map(fn(param) { #(param.name, param) })
@@ -36,6 +47,7 @@ pub fn diff_params(
       False -> Different(old_param, new_param)
     }
   })
+  |> dict.values()
 }
 
 fn params_equal(old_param: Param, new_param: Param) -> Bool {
@@ -48,7 +60,7 @@ fn params_equal(old_param: Param, new_param: Param) -> Bool {
 pub fn diff_tests(
   old_tests: List(Test),
   new_tests: List(Test),
-) -> Dict(String, Diff(Test)) {
+) -> List(Diff(Test)) {
   let old_tests_dict =
     old_tests
     |> list.map(fn(test_) { #(test_.expression, test_) })
@@ -71,6 +83,7 @@ pub fn diff_tests(
       False -> Different(old_test, new_test)
     }
   })
+  |> dict.values()
 }
 
 fn tests_equal(old_test: Test, new_test: Test) -> Bool {
