@@ -1,4 +1,6 @@
+import gleam/bool
 import gleam/float
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/result
@@ -31,7 +33,11 @@ pub type TestResult {
 }
 
 pub type TestDependencyParam {
-  TestDependencyParam(name: String, value: ParamValue, unit: String)
+  TestDependencyParam(
+    name: String,
+    value: ParamValue,
+    unit: Result(String, Nil),
+  )
 }
 
 pub fn process_old_output(output: String) -> #(List(Param), List(Test)) {
@@ -117,9 +123,12 @@ fn parse_old_test_dependency_param(
 
   let name = name |> string.trim()
 
-  let assert Ok(#(value, unit)) = rest |> string.split_once(on: " ")
+  let #(value, unit) = case rest |> string.split_once(on: " ") {
+    Ok(#(value, unit)) -> #(value |> string.trim(), Ok(unit |> string.trim()))
+    Error(Nil) -> #(rest |> string.trim(), Error(Nil))
+  }
+
   let value = parse_param_value(value)
-  let unit = unit |> string.trim()
 
   Ok(TestDependencyParam(name: name, value: value, unit: unit))
 }
@@ -194,7 +203,7 @@ fn parse_new_test(model: String, test_: String) -> Test {
       let test_dependency_params =
         rest
         |> string.split(on: "\n")
-        |> list.map(parse_new_test_dependency_param)
+        |> list.filter_map(parse_new_test_dependency_param)
 
       Fail(params: test_dependency_params)
     }
@@ -204,21 +213,31 @@ fn parse_new_test(model: String, test_: String) -> Test {
   Test(model: model, expression: expression, result: result)
 }
 
-fn parse_new_test_dependency_param(line: String) -> TestDependencyParam {
+fn parse_new_test_dependency_param(
+  line: String,
+) -> Result(TestDependencyParam, Nil) {
+  use <- bool.guard(when: line |> string.is_empty(), return: Error(Nil))
+
   let line =
     line
     |> string.trim_start()
     // drop the `- ` prefix
     |> string.drop_start(2)
 
-  let assert Ok(#(name, rest)) = line |> string.split_once(on: " = ")
+  let assert Ok(#(name, rest)) =
+    line
+    |> string.split_once(on: " = ")
+
   let name = name |> string.trim()
 
-  let assert Ok(#(value, unit)) = rest |> string.split_once(on: " :")
-  let value = value |> string.trim() |> parse_param_value()
-  let unit = unit |> string.trim()
+  let #(value, unit) = case rest |> string.split_once(on: " :") {
+    Ok(#(value, unit)) -> #(value |> string.trim(), Ok(unit |> string.trim()))
+    Error(Nil) -> #(rest |> string.trim(), Error(Nil))
+  }
 
-  TestDependencyParam(name: name, value: value, unit: unit)
+  let value = value |> parse_param_value()
+
+  Ok(TestDependencyParam(name: name, value: value, unit: unit))
 }
 
 fn parse_param_value(value: String) -> ParamValue {
