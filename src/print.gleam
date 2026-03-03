@@ -1,4 +1,5 @@
 import gleam/float
+import gleam/int
 import gleam/io
 import gleam/list
 import gleam/order
@@ -11,6 +12,39 @@ import parse.{
 }
 
 const indent_amount = 2
+
+type DiffSummary {
+  DiffSummary(added: Int, removed: Int, changed: Int)
+}
+
+pub fn print_diff_summary(diffs: List(Diff(a))) -> Nil {
+  let DiffSummary(added, removed, changed) =
+    diffs
+    |> list.fold(
+      from: DiffSummary(added: 0, removed: 0, changed: 0),
+      with: fn(acc, diff) {
+        case diff {
+          OldOnly(_) -> DiffSummary(..acc, removed: acc.removed + 1)
+          Same(_) -> acc
+          Different(_, _) -> DiffSummary(..acc, changed: acc.changed + 1)
+          NewOnly(_) -> DiffSummary(..acc, added: acc.added + 1)
+        }
+      },
+    )
+
+  let summary =
+    bold("summary: ")
+    <> int.to_string(added)
+    <> " added, "
+    <> int.to_string(removed)
+    <> " removed, "
+    <> int.to_string(changed)
+    <> " changed"
+
+  io.println(summary)
+
+  Nil
+}
 
 pub fn print_params_diff(diffs: List(Diff(Param))) -> Nil {
   print_diff(diffs, param_compare, param_to_string)
@@ -158,4 +192,8 @@ fn red(text: String) -> String {
 
 fn green(text: String) -> String {
   "\u{001b}[92m" <> text <> "\u{001b}[0m"
+}
+
+fn bold(text: String) -> String {
+  "\u{001b}[1m" <> text <> "\u{001b}[0m"
 }

@@ -37,9 +37,13 @@ pub fn main() -> Nil {
   io.println("========== PARAMETERS ==========")
   print.print_params_diff(diff_params)
   io.println("")
+  print.print_diff_summary(diff_params)
+  io.println("")
 
   io.println("========== TESTS ==========")
   print.print_tests_diff(diff_tests)
+  io.println("")
+  print.print_diff_summary(diff_tests)
 
   Nil
 }
