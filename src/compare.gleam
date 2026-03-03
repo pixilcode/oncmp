@@ -51,13 +51,13 @@ pub fn compare_tests(
 ) -> Dict(String, Diff(Test)) {
   let old_tests_dict =
     old_tests
-    |> list.map(fn(test_) { #(test_.model, test_) })
+    |> list.map(fn(test_) { #(test_.expression, test_) })
     |> dict.from_list()
     |> dict.map_values(fn(_name, test_) { OldOnly(test_) })
 
   let new_tests_dict =
     new_tests
-    |> list.map(fn(test_) { #(test_.model, test_) })
+    |> list.map(fn(test_) { #(test_.expression, test_) })
     |> dict.from_list()
     |> dict.map_values(fn(_name, test_) { NewOnly(test_) })
 
