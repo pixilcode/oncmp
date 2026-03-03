@@ -1,7 +1,6 @@
 import gleam/bool
 import gleam/float
 import gleam/int
-import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
@@ -176,6 +175,8 @@ fn parse_new_param(line: String) -> Param {
 }
 
 fn parse_new_test_group(group: String) -> List(Test) {
+  use <- bool.guard(when: group |> string.is_empty(), return: [])
+
   let assert Ok(#(model, rest)) = group |> string.split_once(on: ".on\n")
   let model = model |> string.trim()
 
