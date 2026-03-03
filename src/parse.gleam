@@ -94,6 +94,8 @@ fn parse_old_test(line: String) -> Test {
     |> string.trim()
     // remove the par_ prefix from Oneil functions
     |> string.replace(each: "par_", with: "")
+    // replace ** with ^ for power operator
+    |> string.replace(each: "**", with: "^")
 
   let #(result, rest) =
     rest
