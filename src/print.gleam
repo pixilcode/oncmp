@@ -95,6 +95,9 @@ fn test_to_string(test_: Test) -> String {
       "result: fail"
         |> indent_line(indent_amount),
       params
+        |> list.sort(by: fn(param1, param2) {
+          string.compare(param1.name, param2.name)
+        })
         |> list.map(test_dependency_param_to_string)
         |> list.map(indent_line(_, indent_amount)),
     )
