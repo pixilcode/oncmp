@@ -10,7 +10,7 @@ pub type Diff(a) {
   NewOnly(a)
 }
 
-pub fn compare_params(
+pub fn diff_params(
   old_params: List(Param),
   new_params: List(Param),
 ) -> Dict(String, Diff(Param)) {
@@ -45,7 +45,7 @@ fn params_equal(old_param: Param, new_param: Param) -> Bool {
   && old_param.description == new_param.description
 }
 
-pub fn compare_tests(
+pub fn diff_tests(
   old_tests: List(Test),
   new_tests: List(Test),
 ) -> Dict(String, Diff(Test)) {

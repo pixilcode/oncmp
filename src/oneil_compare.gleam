@@ -1,7 +1,6 @@
 import gleam/io
-import gleam/string
 
-import compare
+import diff
 import print
 import process
 import run
@@ -26,12 +25,12 @@ pub fn main() -> Nil {
   io.println("done")
 
   // compare the params and tests
-  io.print("comparing params ... ")
-  let diff_params = compare.compare_params(old_params, new_params)
+  io.print("diffing params ... ")
+  let diff_params = diff.diff_params(old_params, new_params)
   io.println("done")
 
-  io.print("comparing tests ... ")
-  let diff_tests = compare.compare_tests(old_tests, new_tests)
+  io.print("diffing tests ... ")
+  let diff_tests = diff.diff_tests(old_tests, new_tests)
   io.println("done")
 
   // print out the results

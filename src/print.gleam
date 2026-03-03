@@ -4,7 +4,7 @@ import gleam/io
 import gleam/list
 import gleam/string
 
-import compare.{type Diff, Different, NewOnly, OldOnly, Same}
+import diff.{type Diff, Different, NewOnly, OldOnly, Same}
 import process.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
   EmptyInterval, Fail, Interval, NaN, Pass, Scalar, String,
