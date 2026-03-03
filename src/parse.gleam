@@ -89,7 +89,11 @@ fn parse_old_test(line: String) -> Test {
 
   let assert Ok(#(expression, rest)) =
     rest |> string.split_once(on: "\n\tResult: ")
-  let expression = expression |> string.trim()
+  let expression =
+    expression
+    |> string.trim()
+    // remove the par_ prefix from Oneil functions
+    |> string.replace(each: "par_", with: "")
 
   let #(result, rest) =
     rest
