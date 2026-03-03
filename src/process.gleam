@@ -111,15 +111,24 @@ fn parse_old_test_dependency_param(
 const divider_line = "────────────────────────────────────────────────────────────────────────────────\n"
 
 pub fn process_new_output(output: String) -> #(List(Param), List(Test)) {
-  let output = output |> string.replace(each: divider_line, with: "")
-
   let params =
     output
     |> string.split(on: "\n")
     |> list.filter(fn(line) { line |> string.contains("#") })
     |> list.map(parse_new_param)
 
-  todo as "process new output and return params and tests"
+  let tests =
+    output
+    |> string.split(on: divider_line)
+    // drop before the first divider line and
+    // the params before the second divider line
+    |> list.drop(2)
+    |> list.first()
+    |> result.lazy_unwrap(or: fn() { panic as { "no tests found in output" } })
+    |> string.split(on: "\n\n")
+    |> list.flat_map(parse_new_test_group)
+
+  #(params, tests)
 }
 
 fn parse_new_param(line: String) -> Param {
@@ -150,4 +159,56 @@ fn parse_param_value(value: String) -> ParamValue {
       Scalar(value: value)
     }
   }
+}
+
+fn parse_new_test_group(group: String) -> List(Test) {
+  let assert Ok(#(model, rest)) = group |> string.split_once(on: ".on\n")
+  let model = model |> string.trim()
+
+  rest
+  |> string.split(on: "test: ")
+  // drop the first one because it's empty
+  |> list.drop(1)
+  |> list.map(fn(test_) { parse_new_test(model, test_) })
+}
+
+fn parse_new_test(model: String, test_: String) -> Test {
+  let assert Ok(#(expression, rest)) =
+    test_ |> string.split_once(on: "\n  Result: ")
+  let expression = expression |> string.trim()
+
+  let assert Ok(#(result, rest)) = rest |> string.split_once(on: "\n")
+  let result = result |> string.trim()
+
+  let result = case result {
+    "PASS" -> Pass
+    "FAIL" -> {
+      let test_dependency_params =
+        rest
+        |> string.split(on: "\n")
+        |> list.map(parse_new_test_dependency_param)
+
+      Fail(params: test_dependency_params)
+    }
+    _ -> panic as { "invalid test result: " <> result }
+  }
+
+  Test(model: model, expression: expression, result: result)
+}
+
+fn parse_new_test_dependency_param(line: String) -> TestDependencyParam {
+  let line =
+    line
+    |> string.trim_start()
+    // drop the `- ` prefix
+    |> string.drop_start(2)
+
+  let assert Ok(#(name, rest)) = line |> string.split_once(on: " = ")
+  let name = name |> string.trim()
+
+  let assert Ok(#(value, unit)) = rest |> string.split_once(on: " :")
+  let value = value |> string.trim() |> parse_param_value()
+  let unit = unit |> string.trim()
+
+  TestDependencyParam(name: name, value: value, unit: unit)
 }
