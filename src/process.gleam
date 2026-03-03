@@ -148,35 +148,6 @@ fn parse_new_param(line: String) -> Param {
   Param(name: name, value: value, unit: unit, description: description)
 }
 
-fn parse_param_value(value: String) -> ParamValue {
-  let try_interval = value |> string.split_once(on: "|")
-
-  case try_interval {
-    Ok(#(min, max)) -> {
-      case min, max {
-        "none", "none" -> EmptyInterval
-        _, _ -> {
-          let assert Ok(min) = min |> string.trim() |> float.parse()
-          let assert Ok(max) = max |> string.trim() |> float.parse()
-          Interval(min: min, max: max)
-        }
-      }
-    }
-
-    Error(Nil) -> {
-      let value = value |> string.trim()
-      case value {
-        "none" -> NaN
-        "<empty>" -> EmptyInterval
-        _ -> {
-          let assert Ok(value) = value |> float.parse()
-          Scalar(value: value)
-        }
-      }
-    }
-  }
-}
-
 fn parse_new_test_group(group: String) -> List(Test) {
   let assert Ok(#(model, rest)) = group |> string.split_once(on: ".on\n")
   let model = model |> string.trim()
@@ -227,4 +198,33 @@ fn parse_new_test_dependency_param(line: String) -> TestDependencyParam {
   let unit = unit |> string.trim()
 
   TestDependencyParam(name: name, value: value, unit: unit)
+}
+
+fn parse_param_value(value: String) -> ParamValue {
+  let try_interval = value |> string.split_once(on: "|")
+
+  case try_interval {
+    Ok(#(min, max)) -> {
+      case min, max {
+        "none", "none" -> EmptyInterval
+        _, _ -> {
+          let assert Ok(min) = min |> string.trim() |> float.parse()
+          let assert Ok(max) = max |> string.trim() |> float.parse()
+          Interval(min: min, max: max)
+        }
+      }
+    }
+
+    Error(Nil) -> {
+      let value = value |> string.trim()
+      case value {
+        "none" -> NaN
+        "<empty>" -> EmptyInterval
+        _ -> {
+          let assert Ok(value) = value |> float.parse()
+          Scalar(value: value)
+        }
+      }
+    }
+  }
 }
