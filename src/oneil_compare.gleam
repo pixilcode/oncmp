@@ -1,4 +1,5 @@
 import gleam/io
+import gleam/string
 
 import compare
 import print
@@ -34,8 +35,12 @@ pub fn main() -> Nil {
   io.println("done")
 
   // print out the results
-  print.print_diff("params", diff_params)
-  print.print_diff("tests", diff_tests)
+  io.println("========== PARAMETERS ==========")
+  print.print_params_diff(diff_params)
+  io.println("")
+
+  io.println("========== TESTS ==========")
+  print.print_tests_diff(diff_tests)
 
   Nil
 }
