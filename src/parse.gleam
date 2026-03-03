@@ -39,7 +39,7 @@ pub type TestDependencyParam {
   )
 }
 
-pub fn process_old_output(output: String) -> #(List(Param), List(Test)) {
+pub fn parse_old_output(output: String) -> #(List(Param), List(Test)) {
   let params =
     output
     |> string.split(on: "\n")
@@ -134,7 +134,7 @@ fn parse_old_test_dependency_param(
 
 const divider_line = "────────────────────────────────────────────────────────────────────────────────\n"
 
-pub fn process_new_output(output: String) -> #(List(Param), List(Test)) {
+pub fn parse_new_output(output: String) -> #(List(Param), List(Test)) {
   let params =
     output
     |> string.split(on: "\n")

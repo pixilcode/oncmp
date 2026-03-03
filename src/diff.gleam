@@ -1,7 +1,7 @@
 import gleam/dict.{type Dict}
 import gleam/list
 
-import process.{type Param, type Test}
+import parse.{type Param, type Test}
 
 pub type Diff(a) {
   OldOnly(a)

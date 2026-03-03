@@ -1,8 +1,8 @@
 import gleam/io
 
 import diff
+import parse
 import print
-import process
 import run
 
 pub fn main() -> Nil {
@@ -16,12 +16,12 @@ pub fn main() -> Nil {
   io.println("done")
 
   // process the output to get the params and tests
-  io.print("processing old output ... ")
-  let #(old_params, old_tests) = process.process_old_output(old_output)
+  io.print("parsing old output ... ")
+  let #(old_params, old_tests) = parse.parse_old_output(old_output)
   io.println("done")
 
-  io.print("processing new output ... ")
-  let #(new_params, new_tests) = process.process_new_output(new_output)
+  io.print("parsing new output ... ")
+  let #(new_params, new_tests) = parse.parse_new_output(new_output)
   io.println("done")
 
   // compare the params and tests
