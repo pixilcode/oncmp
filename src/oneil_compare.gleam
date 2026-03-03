@@ -1,11 +1,25 @@
+import argv
+import gleam/bool
 import gleam/io
+import gleam/result
 
+import args
 import diff
 import parse
 import print
 import run
 
 pub fn main() -> Nil {
+  io.print("loading args ... ")
+  let parsed_args =
+    argv.load().arguments
+    |> args.parse_args()
+    |> result.map_error(fn(error) { io.println("error: " <> error) })
+
+  use <- bool.guard(when: parsed_args |> result.is_error(), return: Nil)
+  let assert Ok(args) = parsed_args
+  io.println("done")
+
   // get the output from running the old and new versions of Oneil
   io.print("running old Oneil ... ")
   let old_output = run.run_old()
