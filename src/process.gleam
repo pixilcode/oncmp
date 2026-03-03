@@ -87,7 +87,11 @@ fn parse_old_test(line: String) -> Test {
     rest |> string.split_once(on: "\n\tResult: ")
   let expression = expression |> string.trim()
 
-  let assert Ok(#(result, rest)) = rest |> string.split_once(on: "\n")
+  let #(result, rest) =
+    rest
+    |> string.split_once(on: "\n")
+    |> result.unwrap(or: #(rest, ""))
+
   let result = result |> string.trim()
 
   let result = case result {
@@ -178,7 +182,10 @@ fn parse_new_test(model: String, test_: String) -> Test {
     test_ |> string.split_once(on: "\n  Result: ")
   let expression = expression |> string.trim()
 
-  let assert Ok(#(result, rest)) = rest |> string.split_once(on: "\n")
+  let #(result, rest) =
+    rest
+    |> string.split_once(on: "\n")
+    |> result.unwrap(or: #(rest, ""))
   let result = result |> string.trim()
 
   let result = case result {
