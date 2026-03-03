@@ -226,13 +226,30 @@ fn parse_param_value(value: String) -> ParamValue {
 
   case try_interval {
     Ok(#(min, max)) -> {
-      let min = min |> string.trim() |> float.parse()
-      let max = max |> string.trim() |> float.parse()
+      // try to parse as float, if that fails, try to
+      // parse as int and convert to float
+      let min =
+        min
+        |> string.trim()
+        |> parse_int_or_float()
+
+      let max =
+        max
+        |> string.trim()
+        |> parse_int_or_float()
 
       case min, max {
         Ok(min), Ok(max) -> Interval(min: min, max: max)
         Error(Nil), Error(Nil) if min == max -> String(value: value)
-        _, _ -> panic as { "invalid interval: " <> value }
+        _, _ ->
+          panic as {
+            "invalid interval: "
+            <> value
+            <> "\n"
+            <> string.inspect(min)
+            <> "\n"
+            <> string.inspect(max)
+          }
       }
     }
 
@@ -241,7 +258,7 @@ fn parse_param_value(value: String) -> ParamValue {
       case value {
         "<empty>" -> EmptyInterval
         _ -> {
-          case value |> float.parse() {
+          case value |> parse_int_or_float() {
             Ok(value) -> Scalar(value: value)
             Error(Nil) -> String(value: value)
           }
@@ -249,4 +266,16 @@ fn parse_param_value(value: String) -> ParamValue {
       }
     }
   }
+}
+
+fn parse_int_or_float(value: String) -> Result(Float, Nil) {
+  value
+  |> string.trim()
+  |> float.parse()
+  |> result.lazy_or(fn() {
+    value
+    |> string.trim()
+    |> int.parse()
+    |> result.map(int.to_float)
+  })
 }
