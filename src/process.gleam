@@ -5,7 +5,12 @@ import gleam/result
 import gleam/string
 
 pub type Param {
-  Param(name: String, value: ParamValue, unit: String, description: String)
+  Param(
+    name: String,
+    value: ParamValue,
+    unit: Result(String, Nil),
+    description: String,
+  )
 }
 
 pub type ParamValue {
@@ -47,24 +52,22 @@ pub fn process_old_output(output: String) -> #(List(Param), List(Test)) {
 }
 
 fn parse_old_param(line: String) -> Param {
-  case line |> string.contains("ICW") {
-    True -> io.println(line)
-    False -> Nil
-  }
-
   let assert Ok(#(name, rest)) = line |> string.split_once(on: ":")
   let name = name |> string.trim()
 
   let assert Ok(#(value, rest)) =
     rest |> string.trim_start() |> string.split_once(on: " ")
-
   let value = parse_param_value(value)
 
-  let assert Ok(#(unit, rest)) = rest |> string.split_once(on: "-- \"")
-  let unit = unit |> string.trim()
+  let assert Ok(#(unit, rest)) = rest |> string.split_once(on: " -- \"")
+
+  let unit = case string.trim(unit) {
+    "" -> Error(Nil)
+    _ -> Ok(unit)
+  }
 
   let assert Ok(#(description, _rest)) = rest |> string.split_once(on: "\"")
-  let description = description |> string.trim()
+  let description = string.trim(description)
 
   Param(name: name, value: value, unit: unit, description: description)
 }
@@ -144,11 +147,16 @@ fn parse_new_param(line: String) -> Param {
   let assert Ok(#(name, rest)) = line |> string.split_once(on: "=")
   let name = name |> string.trim()
 
-  let assert Ok(#(value, rest)) = rest |> string.split_once(on: ":")
+  let assert Ok(#(value_and_unit, description)) =
+    rest |> string.split_once(on: "#")
+
+  let #(value, unit) = case value_and_unit |> string.split_once(on: ":") {
+    Ok(#(value, unit)) -> #(value |> string.trim(), Ok(unit |> string.trim()))
+    Error(Nil) -> #(value_and_unit |> string.trim(), Error(Nil))
+  }
+
   let value = parse_param_value(value)
 
-  let assert Ok(#(unit, description)) = rest |> string.split_once(on: "#")
-  let unit = unit |> string.trim()
   let description = description |> string.trim()
 
   Param(name: name, value: value, unit: unit, description: description)
