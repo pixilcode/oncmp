@@ -1,4 +1,5 @@
 import gleam/float
+import gleam/io
 import gleam/list
 import gleam/result
 import gleam/string
@@ -8,7 +9,9 @@ pub type Param {
 }
 
 pub type ParamValue {
+  NaN
   Scalar(value: Float)
+  EmptyInterval
   Interval(min: Float, max: Float)
 }
 
@@ -150,13 +153,26 @@ fn parse_param_value(value: String) -> ParamValue {
 
   case try_interval {
     Ok(#(min, max)) -> {
-      let assert Ok(min) = min |> string.trim() |> float.parse()
-      let assert Ok(max) = max |> string.trim() |> float.parse()
-      Interval(min: min, max: max)
+      case min, max {
+        "none", "none" -> EmptyInterval
+        _, _ -> {
+          let assert Ok(min) = min |> string.trim() |> float.parse()
+          let assert Ok(max) = max |> string.trim() |> float.parse()
+          Interval(min: min, max: max)
+        }
+      }
     }
+
     Error(Nil) -> {
-      let assert Ok(value) = value |> string.trim() |> float.parse()
-      Scalar(value: value)
+      let value = value |> string.trim()
+      case value {
+        "none" -> NaN
+        "<empty>" -> EmptyInterval
+        _ -> {
+          let assert Ok(value) = value |> float.parse()
+          Scalar(value: value)
+        }
+      }
     }
   }
 }
