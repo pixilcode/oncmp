@@ -314,6 +314,16 @@ fn parse_string(value: String) -> String {
 }
 
 fn parse_int_or_float(value: String) -> Result(Float, Nil) {
+  let has_e = value |> string.contains("e")
+  let has_decimal = value |> string.contains(".")
+
+  let value = case has_e && !has_decimal {
+    True -> {
+      value |> string.replace(each: "e", with: ".0e")
+    }
+    False -> value
+  }
+
   value
   |> string.trim()
   |> float.parse()
