@@ -4,10 +4,10 @@ import gleam/io
 import gleam/option
 import gleam/result
 
-import args
+import args.{All, Params, Tests}
 import config
-import diff
-import parse
+import diff.{type Diff}
+import parse.{type Param, type Test}
 import print
 import run
 
@@ -69,16 +69,33 @@ pub fn main() -> Nil {
   io.println("done")
 
   // print out the results
-  io.println("========== PARAMETERS ==========")
-  print.print_params_diff(diff_params)
-  io.println("")
-  print.print_diff_summary(diff_params)
-  io.println("")
-
-  io.println("========== TESTS ==========")
-  print.print_tests_diff(diff_tests)
-  io.println("")
-  print.print_diff_summary(diff_tests)
+  case args.mode {
+    All -> {
+      print_params(diff_params)
+      print_tests(diff_tests)
+    }
+    Params -> {
+      print_params(diff_params)
+    }
+    Tests -> {
+      print_tests(diff_tests)
+    }
+  }
 
   Nil
+}
+
+fn print_params(diffs: List(Diff(Param))) -> Nil {
+  io.println("========== PARAMETERS ==========")
+  print.print_params_diff(diffs)
+  io.println("")
+  print.print_diff_summary(diffs)
+  io.println("")
+}
+
+fn print_tests(diffs: List(Diff(Test))) -> Nil {
+  io.println("========== TESTS ==========")
+  print.print_tests_diff(diffs)
+  io.println("")
+  print.print_diff_summary(diffs)
 }

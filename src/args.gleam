@@ -2,11 +2,17 @@ import gleam/option.{type Option, None, Some}
 import gleam/string
 
 pub type Args {
-  Args(config_loc: Option(String))
+  Args(config_loc: Option(String), mode: Mode)
+}
+
+pub type Mode {
+  All
+  Params
+  Tests
 }
 
 fn default_args() -> Args {
-  Args(config_loc: None)
+  Args(config_loc: None, mode: All)
 }
 
 pub fn parse_args(arg_strs: List(String)) -> Result(Args, String) {
@@ -26,6 +32,12 @@ fn parse_args_inner(arg_strs: List(String), args: Args) -> Result(Args, String) 
     }
     ["--config"] -> {
       Error("config location is required")
+    }
+    ["--tests", ..rest] | ["-t", ..rest] -> {
+      parse_args_inner(rest, Args(..args, mode: Tests))
+    }
+    ["--params", ..rest] | ["-p", ..rest] -> {
+      parse_args_inner(rest, Args(..args, mode: Params))
     }
     [arg, ..] -> {
       Error("invalid arg: " <> arg)
