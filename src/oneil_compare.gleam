@@ -69,33 +69,34 @@ pub fn main() -> Nil {
   io.println("done")
 
   // print out the results
+  let skip_unchanged = args.skip_unchanged
   case args.mode {
     All -> {
-      print_params(diff_params)
-      print_tests(diff_tests)
+      print_params(diff_params, skip_unchanged)
+      print_tests(diff_tests, skip_unchanged)
     }
     Params -> {
-      print_params(diff_params)
+      print_params(diff_params, skip_unchanged)
     }
     Tests -> {
-      print_tests(diff_tests)
+      print_tests(diff_tests, skip_unchanged)
     }
   }
 
   Nil
 }
 
-fn print_params(diffs: List(Diff(Param))) -> Nil {
+fn print_params(diffs: List(Diff(Param)), skip_unchanged: Bool) -> Nil {
   io.println("========== PARAMETERS ==========")
-  print.print_params_diff(diffs)
+  print.print_params_diff(diffs, skip_unchanged)
   io.println("")
   print.print_diff_summary(diffs)
   io.println("")
 }
 
-fn print_tests(diffs: List(Diff(Test))) -> Nil {
+fn print_tests(diffs: List(Diff(Test)), skip_unchanged: Bool) -> Nil {
   io.println("========== TESTS ==========")
-  print.print_tests_diff(diffs)
+  print.print_tests_diff(diffs, skip_unchanged)
   io.println("")
   print.print_diff_summary(diffs)
 }
