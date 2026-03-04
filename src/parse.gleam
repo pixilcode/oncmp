@@ -61,7 +61,19 @@ fn parse_old_param(line: String) -> Param {
 
   let assert Ok(#(value, rest)) =
     rest |> string.trim_start() |> string.split_once(on: " ")
-  let value = parse_param_value(value)
+
+  // strings are printed out as `my_str | my_str`
+  // so we need to check if the value is repeated after the `|`
+  let #(value, rest) = case rest |> string.split_once(on: "| " <> value) {
+    Ok(#(_, rest)) -> {
+      let value = String(value: value)
+      #(value, rest)
+    }
+    Error(Nil) -> {
+      let value = parse_param_value(value)
+      #(value, rest)
+    }
+  }
 
   let assert Ok(#(unit, rest)) = rest |> string.split_once(on: " -- \"")
 
