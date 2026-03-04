@@ -30,6 +30,7 @@ pub fn calc_from_diff(diff: Diff(a), f: fn(a) -> b) -> b {
 pub fn diff_params(
   old_params: List(Param),
   new_params: List(Param),
+  ignore_params: List(String),
 ) -> List(Diff(Param)) {
   let old_params_dict =
     old_params
@@ -53,6 +54,19 @@ pub fn diff_params(
       False -> Different(old_param, new_param)
     }
   })
+  |> dict.map_values(fn(name, diff) {
+    use <- bool.guard(
+      when: !{ ignore_params |> list.contains(name) },
+      return: diff,
+    )
+
+    case diff {
+      OldOnly(old_param) -> Same(old_param)
+      Same(both_param) -> Same(both_param)
+      Different(_old_param, new_param) -> Same(new_param)
+      NewOnly(new_param) -> Same(new_param)
+    }
+  })
   |> dict.values()
 }
 
@@ -66,6 +80,7 @@ fn params_equal(old_param: Param, new_param: Param) -> Bool {
 pub fn diff_tests(
   old_tests: List(Test),
   new_tests: List(Test),
+  ignore_tests: List(String),
 ) -> List(Diff(Test)) {
   let old_tests_dict =
     old_tests
@@ -87,6 +102,19 @@ pub fn diff_tests(
     case tests_equal(old_test, new_test) {
       True -> Same(old_test)
       False -> Different(old_test, new_test)
+    }
+  })
+  |> dict.map_values(fn(expression, diff) {
+    use <- bool.guard(
+      when: !{ ignore_tests |> list.contains(expression) },
+      return: diff,
+    )
+
+    case diff {
+      OldOnly(old_test) -> Same(old_test)
+      Same(both_test) -> Same(both_test)
+      Different(_old_test, new_test) -> Same(new_test)
+      NewOnly(new_test) -> Same(new_test)
     }
   })
   |> dict.values()
