@@ -65,6 +65,9 @@ pub fn main() -> Nil {
   let diff_tests = diff.diff_tests(old_tests, new_tests, config.ignore_tests)
   io.println("done")
 
+  // add a blank line between the logs and the results
+  io.println("")
+
   // print out the results
   let skip_unchanged = args.skip_unchanged
   case args.mode {
