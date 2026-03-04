@@ -9,7 +9,12 @@ import tom
 const default_config_loc = "./config.toml"
 
 pub type Config {
-  Config(ignore_params: List(String), ignore_tests: List(String))
+  Config(
+    ignore_params: List(String),
+    ignore_tests: List(String),
+    old_repo: String,
+    new_repo: String,
+  )
 }
 
 pub fn load(config_loc: Option(String)) -> Result(Option(Config), String) {
@@ -57,7 +62,24 @@ fn load_config(config_loc: String) -> Result(Config, String) {
     |> result.map_error(describe_toml_get_error),
   )
 
-  Ok(Config(ignore_params: ignore_params, ignore_tests: ignore_tests))
+  use old_repo <- result.try(
+    toml_config
+    |> tom.get_string(["old_repo"])
+    |> result.map_error(describe_toml_get_error),
+  )
+
+  use new_repo <- result.try(
+    toml_config
+    |> tom.get_string(["new_repo"])
+    |> result.map_error(describe_toml_get_error),
+  )
+
+  Ok(Config(
+    ignore_params: ignore_params,
+    ignore_tests: ignore_tests,
+    old_repo: old_repo,
+    new_repo: new_repo,
+  ))
 }
 
 fn describe_toml_parse_error(error: tom.ParseError) -> String {
