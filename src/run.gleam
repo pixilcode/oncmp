@@ -5,10 +5,11 @@ import shellout
 
 pub fn run_old(old_repo: String, model_file: String) -> String {
   let command =
-    "source .venv/bin/activate && "
-    <> "cd "
+    "cd "
     <> old_repo
     <> " && "
+    <> "source .venv/bin/activate && "
+    <> "cd model/ &&"
     <> "oneil regression-test "
     <> model_file
 
@@ -17,10 +18,11 @@ pub fn run_old(old_repo: String, model_file: String) -> String {
 
 pub fn run_new(new_repo: String, model_file: String) -> String {
   let command =
-    "source .venv/bin/activate && "
-    <> "cd "
+    "cd "
     <> new_repo
     <> " && "
+    <> "source .venv/bin/activate && "
+    <> "cd model/ &&"
     <> "oneil eval "
     <> model_file
     <> " --print-mode all --no-header --no-test-report && "

@@ -62,9 +62,9 @@ tests = ["test_name_to_ignore"]
 | Key | Required | Description |
 |-----|----------|-------------|
 | **`[run]`** | | Paths and model used when invoking Oneil. |
-| `run.old_repo` | Yes | Directory of the legacy model repo. The tool runs `source .venv/bin/activate && cd <old_repo> && oneil regression-test <model_file>`. |
-| `run.new_repo` | Yes | Directory of the updated model repo. The tool runs `oneil eval` and `oneil test` there (with a `.venv` activate and the same `model_file`). |
-| `run.model_file` | Yes | Model file path passed to both `oneil regression-test` (old) and `oneil eval` / `oneil test` (new). Relative to the respective repo. |
+| `run.old_repo` | Yes | Directory of the legacy model repo. The tool runs `cd <old_repo> && source .venv/bin/activate && cd model/ && oneil regression-test <model_file>`. |
+| `run.new_repo` | Yes | Directory of the updated model repo. The tool runs `cd <new_repo> && source .venv/bin/activate && cd model/ && oneil eval <model_file> --print-mode all --no-header --no-test-report && oneil test <model_file> --no-header --recursive`. |
+| `run.model_file` | Yes | Model file path passed to both `oneil regression-test` (legacy) and `oneil eval` / `oneil test` (current). Relative to the `model/` subdirectory of each repo. |
 | **`[ignore]`** | | Names to exclude from the diff. This is useful if you have parameters or tests with changes that you have verified are correct. Omit the section or use empty arrays to diff everything. |
 | `ignore.params` | No | List of parameter names to ignore when comparing parameters. Default: `[]`. |
 | `ignore.tests` | No | List of test names to ignore when comparing tests. Default: `[]`. |
