@@ -1,0 +1,83 @@
+# oncmp (Oneil Compare)
+
+Compare parameters and regression tests between two versions of [Oneil](https://github.com/careweather/oneil): a "legacy" run using `oneil regression-test` and a "current" run using `oneil eval` and `oneil test`. Useful for validating that a refactor or new implementation produces the same parameters and test outcomes.
+
+## Requirements
+
+<!-- TODO: improve this so that it better describes the requirements -->
+
+- [Gleam](https://gleam.run/) (and `gleescript` for building the standalone binary)
+- Two model repo checkouts: one for the old CLI, one for the new
+- A virtualenv (`.venv`) in each repo with `oneil` and/or other Python requirements installed
+
+## Build & install
+
+```bash
+./install.sh ~/.local/bin
+```
+
+Ensure the target directory is in your `PATH`. To install under a different name:
+
+```bash
+BIN_INSTALL_NAME=my-oncmp ./install.sh ~/.local/bin
+```
+
+## Usage
+
+```text
+oncmp [OPTIONS]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `-h`, `--help` | Show help and exit |
+| `--config <path>` | Path to config file (default: `./oncmp_config.toml`) |
+| `-p`, `--params` | Show only parameter diffs |
+| `-t`, `--tests` | Show only test diffs |
+| `-s`, `--skip-unchanged` | Omit unchanged items from output |
+
+The tool runs the old and new Oneil commands as configured, parses their output, diffs parameters and tests (respecting ignore lists), then prints the diff and a summary (added/removed/changed).
+
+## Configuration file
+
+Config is a single TOML file (default path: `./oncmp_config.toml`). Use `--config <path>` to override.
+
+### Structure
+
+```toml
+[run]
+old_repo = "/path/to/old/model/repo"
+new_repo = "/path/to/new/model/repo"
+model_file = "main_model.on"
+
+[ignore]
+params = ["param_name_to_ignore", "another_param"]
+tests = ["test_name_to_ignore"]
+```
+
+### Sections and keys
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| **`[run]`** | | Paths and model used when invoking Oneil. |
+| `run.old_repo` | Yes | Directory of the legacy model repo. The tool runs `source .venv/bin/activate && cd <old_repo> && oneil regression-test <model_file>`. |
+| `run.new_repo` | Yes | Directory of the updated model repo. The tool runs `oneil eval` and `oneil test` there (with a `.venv` activate and the same `model_file`). |
+| `run.model_file` | Yes | Model file path passed to both `oneil regression-test` (old) and `oneil eval` / `oneil test` (new). Relative to the respective repo. |
+| **`[ignore]`** | | Names to exclude from the diff. This is useful if you have parameters or tests with changes that you have verified are correct. Omit the section or use empty arrays to diff everything. |
+| `ignore.params` | No | List of parameter names to ignore when comparing parameters. Default: `[]`. |
+| `ignore.tests` | No | List of test names to ignore when comparing tests. Default: `[]`. |
+
+### Example
+
+```toml
+[run]
+old_repo = "/home/me/veery-legacy"
+new_repo = "/home/me/veery-refactor"
+model_file = "models/example.on"
+
+[ignore]
+params = ["already_verified_param"]
+tests = ["known_flaky_test"]
+```
