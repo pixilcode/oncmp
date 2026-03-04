@@ -1,4 +1,3 @@
-import gleam/dict
 import gleam/list
 import gleam/option.{type Option}
 import gleam/result
@@ -36,9 +35,8 @@ fn load_config(config_loc: String) -> Result(Config, String) {
 
   use ignore_params <- result.try(
     toml_config
-    |> dict.get("ignore_params")
-    |> result.map(tom.as_array)
-    |> result.unwrap(or: Ok([]))
+    |> tom.get_array(["ignore", "params"])
+    |> use_default_if_not_found(default: [])
     |> result.map(list.map(_, tom.as_string))
     |> result.map(result.all)
     |> result.flatten()
@@ -47,9 +45,8 @@ fn load_config(config_loc: String) -> Result(Config, String) {
 
   use ignore_tests <- result.try(
     toml_config
-    |> dict.get("ignore_tests")
-    |> result.map(tom.as_array)
-    |> result.unwrap(or: Ok([]))
+    |> tom.get_array(["ignore", "tests"])
+    |> use_default_if_not_found(default: [])
     |> result.map(list.map(_, tom.as_string))
     |> result.map(result.all)
     |> result.flatten()
@@ -114,6 +111,17 @@ fn describe_toml_get_error(error: tom.GetError) -> String {
       <> got
       <> "'"
     }
+  }
+}
+
+fn use_default_if_not_found(
+  value: Result(a, tom.GetError),
+  default default: a,
+) -> Result(a, tom.GetError) {
+  case value {
+    Ok(value) -> Ok(value)
+    Error(tom.NotFound(_)) -> Ok(default)
+    Error(error) -> Error(error)
   }
 }
 
