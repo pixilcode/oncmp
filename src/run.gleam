@@ -3,25 +3,30 @@ import gleam/string
 
 import shellout
 
-pub fn run_old(old_repo: String) -> String {
+pub fn run_old(old_repo: String, model_file: String) -> String {
   let command =
     "source .venv/bin/activate && "
     <> "cd "
     <> old_repo
     <> " && "
-    <> "oneil regression-test radar.on"
+    <> "oneil regression-test "
+    <> model_file
 
   run_command(command, old_repo)
 }
 
-pub fn run_new(new_repo: String) -> String {
+pub fn run_new(new_repo: String, model_file: String) -> String {
   let command =
     "source .venv/bin/activate && "
     <> "cd "
     <> new_repo
     <> " && "
-    <> "oneil eval radar.on --print-mode all --no-header --no-test-report && "
-    <> "oneil test radar.on --no-header --recursive"
+    <> "oneil eval "
+    <> model_file
+    <> " --print-mode all --no-header --no-test-report && "
+    <> "oneil test "
+    <> model_file
+    <> " --no-header --recursive"
 
   run_command(command, new_repo)
 }

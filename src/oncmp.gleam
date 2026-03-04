@@ -39,11 +39,11 @@ pub fn main() -> Nil {
 
   // get the output from running the old and new versions of Oneil
   io.print("running old Oneil ... ")
-  let old_output = run.run_old(config.old_repo)
+  let old_output = run.run_old(config.old_repo, config.model_file)
   io.println("done")
 
   io.print("running new Oneil ... ")
-  let new_output = run.run_new(config.new_repo)
+  let new_output = run.run_new(config.new_repo, config.model_file)
   io.println("done")
 
   // process the output to get the params and tests

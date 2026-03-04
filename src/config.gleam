@@ -14,6 +14,7 @@ pub type Config {
     ignore_tests: List(String),
     old_repo: String,
     new_repo: String,
+    model_file: String,
   )
 }
 
@@ -57,13 +58,19 @@ fn load_config(config_loc: String) -> Result(Config, String) {
 
   use old_repo <- result.try(
     toml_config
-    |> tom.get_string(["old_repo"])
+    |> tom.get_string(["run", "old_repo"])
     |> result.map_error(describe_toml_get_error),
   )
 
   use new_repo <- result.try(
     toml_config
-    |> tom.get_string(["new_repo"])
+    |> tom.get_string(["run", "new_repo"])
+    |> result.map_error(describe_toml_get_error),
+  )
+
+  use model_file <- result.try(
+    toml_config
+    |> tom.get_string(["run", "model_file"])
     |> result.map_error(describe_toml_get_error),
   )
 
@@ -72,6 +79,7 @@ fn load_config(config_loc: String) -> Result(Config, String) {
     ignore_tests: ignore_tests,
     old_repo: old_repo,
     new_repo: new_repo,
+    model_file: model_file,
   ))
 }
 
