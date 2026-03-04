@@ -12,7 +12,6 @@ import print
 import run
 
 pub fn main() -> Nil {
-  io.print("loading args ... ")
   let parsed_args =
     argv.load().arguments
     |> args.parse_args()
@@ -26,7 +25,9 @@ pub fn main() -> Nil {
     Nil
   })
 
-  io.println("done")
+  // unlike later logging, this doesn't log before the action
+  // so that the help message doesn't start with "loading args ... "
+  io.println("args loaded")
 
   io.print("loading config ... ")
   let config =
