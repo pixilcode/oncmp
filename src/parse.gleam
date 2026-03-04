@@ -287,12 +287,18 @@ fn parse_param_value(value: String) -> ParamValue {
         _ -> {
           case value |> parse_int_or_float() {
             Ok(value) -> Scalar(value: value)
-            Error(Nil) -> String(value: value)
+            Error(Nil) -> String(value: parse_string(value))
           }
         }
       }
     }
   }
+}
+
+fn parse_string(value: String) -> String {
+  value
+  |> string.trim()
+  |> string.replace(each: "'", with: "")
 }
 
 fn parse_int_or_float(value: String) -> Result(Float, Nil) {
