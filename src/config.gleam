@@ -6,7 +6,7 @@ import gleam/string
 import simplifile
 import tom
 
-const default_config_loc = "./config.toml"
+const default_config_loc = "./oncmp_config.toml"
 
 pub type Config {
   Config(

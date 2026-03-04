@@ -23,8 +23,8 @@ gleam build
 echo "Running gleescript..."
 gleam run -m gleescript
 
-echo "Moving ./oneil_compare to $bin_dir/$install_name"
+echo "Moving ./oncmp to $bin_dir/$install_name"
 mkdir -p "$bin_dir"
-mv ./oneil_compare "$bin_dir/$install_name"
+mv ./oncmp "$bin_dir/$install_name"
 
 echo "Done. Ensure $bin_dir is in your PATH."

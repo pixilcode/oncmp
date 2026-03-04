@@ -10,13 +10,13 @@ pub type Args {
   )
 }
 
-pub const help_message = "Usage: oneil-compare [OPTIONS]
+pub const help_message = "Usage: oncmp [OPTIONS]
 
 Compare parameters and tests between old and new Oneil runs.
 
 Options:
   -h, --help           Show this help message and exit
-  --config <path>      Path to config file (default: ./config.toml)
+  --config <path>      Path to config file (default: ./oncmp_config.toml)
   -t, --tests          Show only test diffs
   -p, --params         Show only parameter diffs
   -s, --skip-unchanged Omit unchanged items from output
