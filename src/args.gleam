@@ -2,8 +2,25 @@ import gleam/option.{type Option, None, Some}
 import gleam/string
 
 pub type Args {
-  Args(config_loc: Option(String), mode: Mode, skip_unchanged: Bool)
+  Args(
+    config_loc: Option(String),
+    mode: Mode,
+    skip_unchanged: Bool,
+    show_help: Bool,
+  )
 }
+
+pub const help_message = "Usage: oneil-compare [OPTIONS]
+
+Compare parameters and tests between old and new Oneil runs.
+
+Options:
+  -h, --help           Show this help message and exit
+  --config <path>      Path to config file (default: ./config.toml)
+  -t, --tests          Show only test diffs
+  -p, --params         Show only parameter diffs
+  -s, --skip-unchanged Omit unchanged items from output
+"
 
 pub type Mode {
   All
@@ -12,7 +29,7 @@ pub type Mode {
 }
 
 fn default_args() -> Args {
-  Args(config_loc: None, mode: All, skip_unchanged: False)
+  Args(config_loc: None, mode: All, skip_unchanged: False, show_help: False)
 }
 
 pub fn parse_args(arg_strs: List(String)) -> Result(Args, String) {
@@ -41,6 +58,9 @@ fn parse_args_inner(arg_strs: List(String), args: Args) -> Result(Args, String) 
     }
     ["--skip-unchanged", ..rest] | ["-s", ..rest] -> {
       parse_args_inner(rest, Args(..args, skip_unchanged: True))
+    }
+    ["--help", ..rest] | ["-h", ..rest] -> {
+      parse_args_inner(rest, Args(..args, show_help: True))
     }
     [arg, ..] -> {
       Error("invalid arg: " <> arg)

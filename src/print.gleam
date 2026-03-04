@@ -5,6 +5,7 @@ import gleam/list
 import gleam/order
 import gleam/string
 
+import args
 import diff.{type Diff, Different, NewOnly, OldOnly, Same}
 import parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
@@ -13,10 +14,16 @@ import parse.{
 
 const indent_amount = 2
 
-pub fn print_error(error: String) -> Nil {
+pub fn print_help() -> Nil {
+  io.println(args.help_message)
+}
+
+pub fn print_error_and_help(error: String) -> Nil {
   { "\nerror: " <> error }
   |> red()
   |> io.println_error()
+
+  print_help()
 }
 
 type DiffSummary {

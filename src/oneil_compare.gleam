@@ -16,16 +16,22 @@ pub fn main() -> Nil {
   let parsed_args =
     argv.load().arguments
     |> args.parse_args()
-    |> result.map_error(print.print_error)
+    |> result.map_error(print.print_error_and_help)
 
   use <- bool.guard(when: parsed_args |> result.is_error(), return: Nil)
   let assert Ok(args) = parsed_args
+
+  use <- bool.lazy_guard(when: args.show_help, return: fn() {
+    print.print_help()
+    Nil
+  })
+
   io.println("done")
 
   io.print("loading config ... ")
   let config =
     config.load(args.config_loc)
-    |> result.map_error(print.print_error)
+    |> result.map_error(print.print_error_and_help)
 
   use <- bool.guard(when: config |> result.is_error(), return: Nil)
   let assert Ok(config) = config
