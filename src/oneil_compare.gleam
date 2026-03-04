@@ -1,7 +1,6 @@
 import argv
 import gleam/bool
 import gleam/io
-import gleam/option
 import gleam/result
 
 import args.{All, Params, Tests}
@@ -58,21 +57,12 @@ pub fn main() -> Nil {
 
   // compare the params and tests
   io.print("diffing params ... ")
-  let ignore_params =
-    config
-    |> option.map(fn(config) { config.ignore_params })
-    |> option.unwrap(or: [])
-
-  let diff_params = diff.diff_params(old_params, new_params, ignore_params)
+  let diff_params =
+    diff.diff_params(old_params, new_params, config.ignore_params)
   io.println("done")
 
   io.print("diffing tests ... ")
-  let ignore_tests =
-    config
-    |> option.map(fn(config) { config.ignore_tests })
-    |> option.unwrap(or: [])
-
-  let diff_tests = diff.diff_tests(old_tests, new_tests, ignore_tests)
+  let diff_tests = diff.diff_tests(old_tests, new_tests, config.ignore_tests)
   io.println("done")
 
   // print out the results

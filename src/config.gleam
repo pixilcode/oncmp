@@ -1,6 +1,6 @@
 import gleam/dict
 import gleam/list
-import gleam/option.{type Option, None, Some}
+import gleam/option.{type Option}
 import gleam/result
 import gleam/string
 import simplifile
@@ -17,16 +17,9 @@ pub type Config {
   )
 }
 
-pub fn load(config_loc: Option(String)) -> Result(Option(Config), String) {
-  case config_loc {
-    None ->
-      load_config(default_config_loc)
-      |> result.map(Some)
-      |> result.or(Ok(None))
-    Some(config_loc) ->
-      load_config(config_loc)
-      |> result.map(Some)
-  }
+pub fn load(config_loc: Option(String)) -> Result(Config, String) {
+  let config_loc = config_loc |> option.unwrap(or: default_config_loc)
+  load_config(config_loc)
 }
 
 fn load_config(config_loc: String) -> Result(Config, String) {
