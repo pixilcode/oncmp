@@ -188,7 +188,7 @@ fn value_to_string(value: ParamValue) -> String {
     Scalar(value) -> float.to_string(value)
     EmptyInterval -> "<empty>"
     Interval(min, max) -> float.to_string(min) <> " | " <> float.to_string(max)
-    String(value) -> "\"" <> value <> "\""
+    String(value) -> "'" <> value <> "'"
   }
 }
 
