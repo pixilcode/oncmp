@@ -3,26 +3,27 @@ import gleam/string
 
 import shellout
 
-pub fn run_old() -> String {
-  let old_location = "../veery_old"
+pub fn run_old(old_repo: String) -> String {
   let command =
     "source .venv/bin/activate && "
-    <> "cd model && "
+    <> "cd "
+    <> old_repo
+    <> " && "
     <> "oneil regression-test radar.on"
 
-  run_command(command, old_location)
+  run_command(command, old_repo)
 }
 
-pub fn run_new() -> String {
-  let new_location = "../veery"
-
+pub fn run_new(new_repo: String) -> String {
   let command =
     "source .venv/bin/activate && "
-    <> "cd model && "
+    <> "cd "
+    <> new_repo
+    <> " && "
     <> "oneil eval radar.on --print-mode all --no-header --no-test-report && "
     <> "oneil test radar.on --no-header --recursive"
 
-  run_command(command, new_location)
+  run_command(command, new_repo)
 }
 
 fn run_command(command: String, location: String) -> String {
