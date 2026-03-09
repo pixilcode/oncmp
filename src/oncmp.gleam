@@ -48,12 +48,46 @@ pub fn main() -> Nil {
 
   // process the output to get the params and tests
   io.print("parsing old output ... ")
-  let #(old_params, old_tests) = parse.parse_old_output(old_output)
+  let old_output_result = parse.parse_old_output(old_output)
   io.println("done")
 
+  // print the error if there is one
+  let _ =
+    old_output_result
+    |> result.map_error(fn(error) {
+      print.print_error(error)
+      case args.print_source_on_parse_error {
+        True -> {
+          io.println("source:")
+          io.println(old_output)
+        }
+        False -> Nil
+      }
+    })
+
+  use <- bool.guard(when: old_output_result |> result.is_error(), return: Nil)
+  let assert Ok(#(old_params, old_tests)) = old_output_result
+
   io.print("parsing new output ... ")
-  let #(new_params, new_tests) = parse.parse_new_output(new_output)
+  let new_output_result = parse.parse_new_output(new_output)
   io.println("done")
+
+  // print the error if there is one
+  let _ =
+    new_output_result
+    |> result.map_error(fn(error) {
+      print.print_error(error)
+      case args.print_source_on_parse_error {
+        True -> {
+          io.println("source:")
+          io.println(new_output)
+        }
+        False -> Nil
+      }
+    })
+
+  use <- bool.guard(when: new_output_result |> result.is_error(), return: Nil)
+  let assert Ok(#(new_params, new_tests)) = new_output_result
 
   // compare the params and tests
   io.print("diffing params ... ")

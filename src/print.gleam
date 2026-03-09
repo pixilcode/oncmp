@@ -18,11 +18,14 @@ pub fn print_help() -> Nil {
   io.println(args.help_message)
 }
 
-pub fn print_error_and_help(error: String) -> Nil {
+pub fn print_error(error: String) -> Nil {
   { "\nerror: " <> error }
   |> red()
   |> io.println_error()
+}
 
+pub fn print_error_and_help(error: String) -> Nil {
+  print_error(error)
   print_help()
 }
 

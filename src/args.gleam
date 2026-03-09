@@ -7,6 +7,7 @@ pub type Args {
     mode: Mode,
     skip_unchanged: Bool,
     show_help: Bool,
+    print_source_on_parse_error: Bool,
   )
 }
 
@@ -29,7 +30,13 @@ pub type Mode {
 }
 
 fn default_args() -> Args {
-  Args(config_loc: None, mode: All, skip_unchanged: False, show_help: False)
+  Args(
+    config_loc: None,
+    mode: All,
+    skip_unchanged: False,
+    show_help: False,
+    print_source_on_parse_error: False,
+  )
 }
 
 pub fn parse_args(arg_strs: List(String)) -> Result(Args, String) {
@@ -61,6 +68,9 @@ fn parse_args_inner(arg_strs: List(String), args: Args) -> Result(Args, String) 
     }
     ["--help", ..rest] | ["-h", ..rest] -> {
       parse_args_inner(rest, Args(..args, show_help: True))
+    }
+    ["--print-source-on-parse-error", ..rest] | ["-e", ..rest] -> {
+      parse_args_inner(rest, Args(..args, print_source_on_parse_error: True))
     }
     [arg, ..] -> {
       Error("invalid arg: " <> arg)

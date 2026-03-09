@@ -2,6 +2,7 @@ import gleam/bool
 import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 
@@ -38,69 +39,132 @@ pub type TestDependencyParam {
   )
 }
 
-pub fn parse_old_output(output: String) -> #(List(Param), List(Test)) {
-  let params =
+pub fn parse_old_output(
+  output: String,
+) -> Result(#(List(Param), List(Test)), String) {
+  use params <- result.try(
     output
     |> string.split(on: "\n")
     |> list.filter(fn(line) { line |> string.contains("-- \"") })
     |> list.map(parse_old_param)
+    |> result.all(),
+  )
 
-  let tests =
+  use tests <- result.try(
     output
     |> string.split(on: "\nTest (")
     // drop the first one because it's the parameters
     |> list.drop(1)
     |> list.map(parse_old_test)
+    |> result.all(),
+  )
 
-  #(params, tests)
+  Ok(#(params, tests))
 }
 
-fn parse_old_param(line: String) -> Param {
-  let assert Ok(#(name, rest)) = line |> string.split_once(on: ":")
+fn parse_old_param(line: String) -> Result(Param, String) {
+  use #(name, rest) <- result.try(
+    line
+    |> string.split_once(on: ":")
+    |> result.map_error(fn(_error) {
+      "error splitting old param on ':' for string: " <> string.inspect(line)
+    }),
+  )
   let name = name |> string.trim()
 
-  let assert Ok(#(value, rest)) =
-    rest |> string.trim_start() |> string.split_once(on: " ")
+  use #(value, rest) <- result.try(
+    rest
+    |> string.trim_start()
+    |> string.split_once(on: " ")
+    |> result.map_error(fn(_error) {
+      "error splitting old param on ' ' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    }),
+  )
 
   // strings are printed out as `my_str | my_str`
   // so we need to check if the value is repeated after the `|`
-  let #(value, rest) = case rest |> string.split_once(on: "| " <> value) {
-    Ok(#(_, rest)) -> {
+  use #(value, rest) <- result.try(
+    rest
+    |> string.split_once(on: "| " <> value)
+    |> result.map(fn(result) {
+      let #(_, rest) = result
       let value = String(value: value)
       #(value, rest)
-    }
-    Error(Nil) -> {
-      let value = parse_param_value(value)
-      #(value, rest)
-    }
-  }
+    })
+    |> result.try_recover(fn(_error) {
+      use value <- result.try(value |> parse_param_value())
+      Ok(#(value, rest))
+    }),
+  )
 
-  let assert Ok(#(unit, rest)) = rest |> string.split_once(on: " -- \"")
+  use #(unit, rest) <- result.try(
+    rest
+    |> string.split_once(on: " -- \"")
+    |> result.map_error(fn(_error) {
+      "error splitting old param on ' -- \"' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    }),
+  )
 
   let unit = case string.trim(unit) {
     "" -> Error(Nil)
     _ -> Ok(unit)
   }
 
-  let assert Ok(#(description, _rest)) = rest |> string.split_once(on: "\"")
+  use #(description, _rest) <- result.try(
+    rest
+    |> string.split_once(on: "\"")
+    |> result.map_error(fn(_error) {
+      "error splitting old param on '\"' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    }),
+  )
+
   let description = string.trim(description)
 
-  Param(name: name, value: value, unit: unit, description: description)
+  Ok(Param(name: name, value: value, unit: unit, description: description))
 }
 
-fn parse_old_test(line: String) -> Test {
+fn parse_old_test(line: String) -> Result(Test, String) {
   let line =
     line
     |> string.trim_start()
 
-  let assert Ok(#(model, rest)) = line |> string.split_once(on: ")")
+  use #(model, rest) <- result.try(
+    line
+    |> string.split_once(on: ")")
+    |> result.map_error(fn(_error) {
+      "error splitting test on ')' for string: " <> string.inspect(line)
+    }),
+  )
+
   let model = model |> string.trim()
 
   // drop the colon
   let rest = rest |> string.drop_start(1) |> string.trim_start()
 
-  let assert Ok(#(expression, rest)) =
-    rest |> string.split_once(on: "\n\tResult: ")
+  use #(expression, rest) <- result.try(
+    rest
+    |> string.split_once(on: "\n\tResult: ")
+    |> result.map_error(fn(_error) {
+      "error splitting test on '\\n\\tResult: ' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    }),
+  )
+
   let expression =
     expression
     |> string.trim()
@@ -116,26 +180,48 @@ fn parse_old_test(line: String) -> Test {
 
   let result = result |> string.trim()
 
-  let result = case result {
-    "pass" -> Pass
+  use result <- result.try(case result {
+    "pass" -> Ok(Pass)
     "fail" -> {
-      let test_dependency_params =
+      use test_dependency_params <- result.try(
         rest
         |> string.split(on: "\n")
-        |> list.filter_map(parse_old_test_dependency_param)
+        |> list.map(parse_old_test_dependency_param)
+        |> result.all(),
+      )
 
-      Fail(params: test_dependency_params)
+      let test_dependency_params =
+        test_dependency_params
+        |> list.filter_map(fn(param) {
+          param
+          |> option.map(Ok)
+          |> option.unwrap(or: Error(Nil))
+        })
+
+      Ok(Fail(params: test_dependency_params))
     }
-    _ -> panic as { "invalid test result: " <> result }
-  }
+    _ ->
+      Error(
+        "invalid test result: "
+        <> result
+        <> " (line: "
+        <> string.inspect(line)
+        <> ")",
+      )
+  })
 
-  Test(model: model, expression: expression, result: result)
+  Ok(Test(model: model, expression: expression, result: result))
 }
 
 fn parse_old_test_dependency_param(
   line: String,
-) -> Result(TestDependencyParam, Nil) {
-  use #(name, rest) <- result.try(line |> string.split_once(on: ":"))
+) -> Result(Option(TestDependencyParam), String) {
+  let result =
+    line
+    |> string.split_once(on: ":")
+
+  use <- bool.guard(when: result |> result.is_error(), return: Ok(None))
+  let assert Ok(#(name, rest)) = result
 
   let name = name |> string.trim()
 
@@ -146,57 +232,93 @@ fn parse_old_test_dependency_param(
     Error(Nil) -> #(rest |> string.trim(), Error(Nil))
   }
 
-  let value = parse_param_value(value)
+  use value <- result.try(value |> parse_param_value())
 
-  Ok(TestDependencyParam(name: name, value: value, unit: unit))
+  Ok(Some(TestDependencyParam(name: name, value: value, unit: unit)))
 }
 
 const divider_line = "────────────────────────────────────────────────────────────────────────────────\n"
 
-pub fn parse_new_output(output: String) -> #(List(Param), List(Test)) {
-  let params =
+pub fn parse_new_output(
+  output: String,
+) -> Result(#(List(Param), List(Test)), String) {
+  use params <- result.try(
     output
     |> string.split(on: "\n")
     |> list.filter(fn(line) { line |> string.contains("#") })
     |> list.map(parse_new_param)
+    |> result.all(),
+  )
 
-  let tests =
+  use tests <- result.try(
     output
     |> string.split(on: divider_line)
     // drop before the first divider line and
     // the params before the second divider line
     |> list.drop(2)
     |> list.first()
-    |> result.lazy_unwrap(or: fn() { panic as { "no tests found in output" } })
-    |> string.split(on: "\n\n")
-    |> list.flat_map(parse_new_test_group)
+    |> result.map_error(fn(_error) { "no tests found in output" }),
+  )
 
-  #(params, tests)
+  use tests <- result.try(
+    tests
+    |> string.split(on: "\n\n")
+    |> list.map(parse_new_test_group)
+    |> result.all(),
+  )
+
+  let tests =
+    tests
+    |> list.flatten()
+
+  Ok(#(params, tests))
 }
 
-fn parse_new_param(line: String) -> Param {
-  let assert Ok(#(name, rest)) = line |> string.split_once(on: "=")
+fn parse_new_param(line: String) -> Result(Param, String) {
+  use #(name, rest) <- result.try(
+    line
+    |> string.split_once(on: "=")
+    |> result.map_error(fn(_error) {
+      "error splitting param on '=' for string: " <> string.inspect(line)
+    }),
+  )
   let name = name |> string.trim()
 
-  let assert Ok(#(value_and_unit, description)) =
-    rest |> string.split_once(on: "#")
+  use #(value_and_unit, description) <- result.try(
+    rest
+    |> string.split_once(on: "#")
+    |> result.map_error(fn(_error) {
+      "error splitting param on '#' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    }),
+  )
 
   let #(value, unit) = case value_and_unit |> string.split_once(on: ":") {
     Ok(#(value, unit)) -> #(value |> string.trim(), Ok(unit |> string.trim()))
     Error(Nil) -> #(value_and_unit |> string.trim(), Error(Nil))
   }
 
-  let value = parse_param_value(value)
+  use value <- result.try(value |> parse_param_value())
 
   let description = description |> string.trim()
 
-  Param(name: name, value: value, unit: unit, description: description)
+  Ok(Param(name: name, value: value, unit: unit, description: description))
 }
 
-fn parse_new_test_group(group: String) -> List(Test) {
-  use <- bool.guard(when: group |> string.is_empty(), return: [])
+fn parse_new_test_group(group: String) -> Result(List(Test), String) {
+  use <- bool.guard(when: group |> string.is_empty(), return: Ok([]))
 
-  let assert Ok(#(model, rest)) = group |> string.split_once(on: ".on\n")
+  use #(model, rest) <- result.try(
+    group
+    |> string.split_once(on: ".on\n")
+    |> result.map_error(fn(_error) {
+      "error parsing test group for string: " <> group
+    }),
+  )
+
   let model = model |> string.trim()
 
   rest
@@ -204,39 +326,64 @@ fn parse_new_test_group(group: String) -> List(Test) {
   // drop the first one because it's empty
   |> list.drop(1)
   |> list.map(fn(test_) { parse_new_test(model, test_) })
+  |> result.all()
 }
 
-fn parse_new_test(model: String, test_: String) -> Test {
-  let assert Ok(#(expression, rest)) =
-    test_ |> string.split_once(on: "\n  Result: ")
+fn parse_new_test(model: String, test_: String) -> Result(Test, String) {
+  use #(expression, rest) <- result.try(
+    test_
+    |> string.split_once(on: "\n  Result: ")
+    |> result.map_error(fn(_error) {
+      "error splitting test on '\\n  Result: ' for string: "
+      <> string.inspect(test_)
+    }),
+  )
+
   let expression = expression |> string.trim()
 
   let #(result, rest) =
     rest
     |> string.split_once(on: "\n")
     |> result.unwrap(or: #(rest, ""))
+
   let result = result |> string.trim()
 
-  let result = case result {
-    "PASS" -> Pass
+  use result <- result.try(case result {
+    "PASS" -> Ok(Pass)
     "FAIL" -> {
-      let test_dependency_params =
+      use test_dependency_params <- result.try(
         rest
         |> string.split(on: "\n")
-        |> list.filter_map(parse_new_test_dependency_param)
+        |> list.map(parse_new_test_dependency_param)
+        |> result.all(),
+      )
 
-      Fail(params: test_dependency_params)
+      let test_dependency_params =
+        test_dependency_params
+        |> list.filter_map(fn(param) {
+          param
+          |> option.map(Ok)
+          |> option.unwrap(or: Error(Nil))
+        })
+
+      Ok(Fail(params: test_dependency_params))
     }
-    _ -> panic as { "invalid test result: " <> result }
-  }
+    _ ->
+      Error(
+        "invalid test result: "
+        <> result
+        <> " for string: "
+        <> string.inspect(test_),
+      )
+  })
 
-  Test(model: model, expression: expression, result: result)
+  Ok(Test(model: model, expression: expression, result: result))
 }
 
 fn parse_new_test_dependency_param(
   line: String,
-) -> Result(TestDependencyParam, Nil) {
-  use <- bool.guard(when: line |> string.is_empty(), return: Error(Nil))
+) -> Result(Option(TestDependencyParam), String) {
+  use <- bool.guard(when: line |> string.is_empty(), return: Ok(None))
 
   let line =
     line
@@ -244,9 +391,14 @@ fn parse_new_test_dependency_param(
     // drop the `- ` prefix
     |> string.drop_start(2)
 
-  let assert Ok(#(name, rest)) =
+  use #(name, rest) <- result.try(
     line
     |> string.split_once(on: " = ")
+    |> result.map_error(fn(_error) {
+      "error splitting test dependency param on ' = ' for string: "
+      <> string.inspect(line)
+    }),
+  )
 
   let name = name |> string.trim()
 
@@ -255,12 +407,12 @@ fn parse_new_test_dependency_param(
     Error(Nil) -> #(rest |> string.trim(), Error(Nil))
   }
 
-  let value = value |> parse_param_value()
+  use value <- result.try(value |> parse_param_value())
 
-  Ok(TestDependencyParam(name: name, value: value, unit: unit))
+  Ok(Some(TestDependencyParam(name: name, value: value, unit: unit)))
 }
 
-fn parse_param_value(value: String) -> ParamValue {
+fn parse_param_value(value: String) -> Result(ParamValue, String) {
   let try_interval = value |> string.split_once(on: "|")
 
   case try_interval {
@@ -278,28 +430,28 @@ fn parse_param_value(value: String) -> ParamValue {
         |> parse_int_or_float()
 
       case min, max {
-        Ok(min), Ok(max) -> Interval(min: min, max: max)
-        Error(Nil), Error(Nil) if min == max -> String(value: value)
+        Ok(min), Ok(max) -> Ok(Interval(min: min, max: max))
+        Error(Nil), Error(Nil) if min == max -> Ok(String(value: value))
         _, _ ->
-          panic as {
+          Error(
             "invalid interval: "
             <> value
             <> "\n"
             <> string.inspect(min)
             <> "\n"
-            <> string.inspect(max)
-          }
+            <> string.inspect(max),
+          )
       }
     }
 
     Error(Nil) -> {
       let value = value |> string.trim()
       case value {
-        "<empty>" -> EmptyInterval
+        "<empty>" -> Ok(EmptyInterval)
         _ -> {
           case value |> parse_int_or_float() {
-            Ok(value) -> Scalar(value: value)
-            Error(Nil) -> String(value: parse_string(value))
+            Ok(value) -> Ok(Scalar(value: value))
+            Error(Nil) -> Ok(String(value: parse_string(value)))
           }
         }
       }
