@@ -36,7 +36,7 @@ oncmp [OPTIONS]
 | `--config <path>` | Path to config file (default: `./oncmp_config.toml`) |
 | `-p`, `--params` | Show only parameter diffs |
 | `-t`, `--tests` | Show only test diffs |
-| `-s`, `--skip-unchanged` | Omit unchanged items from output |
+| `-i`, `--include-unchanged` | Include unchanged items in the output |
 
 The tool runs the old and new Oneil commands as configured, parses their output, diffs parameters and tests (respecting ignore lists), then prints the diff and a summary (added/removed/changed).
 

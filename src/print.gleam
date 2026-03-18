@@ -62,8 +62,11 @@ pub fn print_diff_summary(diffs: List(Diff(a))) -> Nil {
   Nil
 }
 
-pub fn print_params_diff(diffs: List(Diff(Param)), skip_unchanged: Bool) -> Nil {
-  print_diff(diffs, skip_unchanged, param_compare, param_to_string)
+pub fn print_params_diff(
+  diffs: List(Diff(Param)),
+  include_unchanged: Bool,
+) -> Nil {
+  print_diff(diffs, include_unchanged, param_compare, param_to_string)
 }
 
 fn param_compare(param1: Diff(Param), param2: Diff(Param)) -> order.Order {
@@ -84,8 +87,8 @@ fn param_to_string(param: Param) -> String {
   param.name <> " = " <> value <> unit <> "  # " <> param.description
 }
 
-pub fn print_tests_diff(diffs: List(Diff(Test)), skip_unchanged: Bool) -> Nil {
-  print_diff(diffs, skip_unchanged, test_compare, test_to_string)
+pub fn print_tests_diff(diffs: List(Diff(Test)), include_unchanged: Bool) -> Nil {
+  print_diff(diffs, include_unchanged, test_compare, test_to_string)
 }
 
 fn test_compare(test1: Diff(Test), test2: Diff(Test)) -> order.Order {
@@ -139,7 +142,7 @@ fn test_dependency_param_to_string(param: TestDependencyParam) -> String {
 
 fn print_diff(
   diffs: List(Diff(a)),
-  skip_unchanged: Bool,
+  include_unchanged: Bool,
   compare: fn(Diff(a), Diff(a)) -> order.Order,
   to_string: fn(a) -> String,
 ) -> Nil {
@@ -154,7 +157,7 @@ fn print_diff(
         |> io.println()
       }
 
-      Same(_) if skip_unchanged -> {
+      Same(_) if !include_unchanged -> {
         Nil
       }
 
