@@ -25,7 +25,7 @@ pub fn run_new(new_repo: String, model_file: String) -> String {
     <> "cd model/ &&"
     <> "oneil eval "
     <> model_file
-    <> " --print-mode all --no-header --no-test-report && "
+    <> " --print all --no-header --no-test-report && "
     <> "oneil test "
     <> model_file
     <> " --no-header --recursive"
