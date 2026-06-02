@@ -4,7 +4,11 @@ import gleam/string
 
 import shellout
 
-pub fn run_old(old_repo: String, model_file: String) -> Result(String, String) {
+pub type Error {
+  RunError(error_code: Int, output: String, command: String, location: String)
+}
+
+pub fn run_old(old_repo: String, model_file: String) -> Result(String, Error) {
   let command =
     "cd "
     <> old_repo
@@ -17,7 +21,7 @@ pub fn run_old(old_repo: String, model_file: String) -> Result(String, String) {
   run_command(command, old_repo)
 }
 
-pub fn run_new(new_repo: String, model_file: String) -> Result(String, String) {
+pub fn run_new(new_repo: String, model_file: String) -> Result(String, Error) {
   let command =
     "cd "
     <> new_repo
@@ -34,7 +38,7 @@ pub fn run_new(new_repo: String, model_file: String) -> Result(String, String) {
   run_command(command, new_repo)
 }
 
-fn run_command(command: String, location: String) -> Result(String, String) {
+fn run_command(command: String, location: String) -> Result(String, Error) {
   shellout.command(
     run: "sh",
     with: [
@@ -53,16 +57,20 @@ fn run_command(command: String, location: String) -> Result(String, String) {
   |> result.map_error(fn(error) {
     let #(error_code, output) = error
 
-    "\nFailed to run command (error code: "
-    <> int.to_string(error_code)
-    <> "):\n"
-    <> output
-    <> "\n"
-    <> "Command: "
-    <> command
-    <> "\n"
-    <> "Location: "
-    <> location
-    <> "\n"
+    RunError(error_code:, output:, command:, location:)
   })
+}
+
+pub fn error_to_string(error: Error) -> String {
+  "\nFailed to run command (error code: "
+  <> int.to_string(error.error_code)
+  <> "):\n"
+  <> error.output
+  <> "\n"
+  <> "Command: "
+  <> error.command
+  <> "\n"
+  <> "Location: "
+  <> error.location
+  <> "\n"
 }

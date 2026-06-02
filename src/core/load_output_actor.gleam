@@ -1,4 +1,5 @@
 import core/parse.{type ParseOutput}
+import core/run
 import gleam/bool
 import gleam/erlang/process.{type Subject}
 import gleam/otp/actor
@@ -21,7 +22,7 @@ pub type LoadOutputMessage {
 
 pub fn handle_message(
   name: String,
-  run_fn: fn(String, String) -> Result(String, String),
+  run_fn: fn(String, String) -> Result(String, run.Error),
   parse_fn: fn(String) -> Result(ParseOutput, String),
   context: LoadOutputContext,
 ) -> fn(LoadOutputState, LoadOutputMessage) ->
@@ -36,7 +37,9 @@ pub fn handle_message(
         let result: Result(ParseOutput, String) = {
           // run the program
           log(name, "running program")
-          let output_result = run_fn(repo, model_file)
+          let output_result =
+            run_fn(repo, model_file)
+            |> result.map_error(run.error_to_string)
           log(name, "received program result")
 
           // print out an error if running the program failed
