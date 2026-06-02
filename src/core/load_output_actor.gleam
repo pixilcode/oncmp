@@ -1,33 +1,39 @@
+import core/parse.{type ParseOutput}
 import gleam/bool
 import gleam/erlang/process.{type Subject}
-import gleam/io
 import gleam/otp/actor
 import gleam/result
 import gleam/string
 
-import core/parse.{type Param, type Test}
+pub type LoadOutputContext {
+  Context(print_source_on_parse_error: Bool, log_fn: fn(String) -> Nil)
+}
 
 pub type LoadOutputState {
   Uninitialized
-  Complete(Result(#(List(Param), List(Test)), String))
+  Complete(Result(ParseOutput, String))
 }
 
 pub type LoadOutputMessage {
   Run(repo: String, model_file: String)
-  GetResult(Subject(Result(#(List(Param), List(Test)), String)))
+  GetResult(Subject(Result(ParseOutput, String)))
 }
 
 pub fn handle_message(
   name: String,
   run_fn: fn(String, String) -> Result(String, String),
-  parse_fn: fn(String) -> Result(#(List(Param), List(Test)), String),
-  print_source_on_parse_error: Bool,
+  parse_fn: fn(String) -> Result(ParseOutput, String),
+  context: LoadOutputContext,
 ) -> fn(LoadOutputState, LoadOutputMessage) ->
   actor.Next(LoadOutputState, LoadOutputMessage) {
+  let log = fn(name: String, message: String) {
+    context.log_fn("  [" <> name <> "] " <> message)
+  }
+
   fn(state, message) {
     case state, message {
       Uninitialized, Run(repo, model_file) -> {
-        let result: Result(#(List(Param), List(Test)), String) = {
+        let result: Result(ParseOutput, String) = {
           // run the program
           log(name, "running program")
           let output_result = run_fn(repo, model_file)
@@ -56,7 +62,7 @@ pub fn handle_message(
 
           parse_result
           |> result.map_error(fn(error) {
-            use <- bool.guard(!print_source_on_parse_error, error)
+            use <- bool.guard(!context.print_source_on_parse_error, error)
 
             let output = output |> string.replace(each: "\n", with: "\n    ")
             error <> "\n\nSource:\n    " <> output
@@ -73,8 +79,4 @@ pub fn handle_message(
       _, _ -> panic as "invalid message and state"
     }
   }
-}
-
-fn log(name: String, message: String) {
-  io.println("  [" <> name <> "] " <> message)
 }

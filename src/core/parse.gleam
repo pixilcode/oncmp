@@ -6,6 +6,9 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 
+pub type ParseOutput =
+  #(List(Param), List(Test))
+
 pub type Param {
   Param(
     name: String,
@@ -39,9 +42,7 @@ pub type TestDependencyParam {
   )
 }
 
-pub fn parse_old_output(
-  output: String,
-) -> Result(#(List(Param), List(Test)), String) {
+pub fn parse_old_output(output: String) -> Result(ParseOutput, String) {
   use params <- result.try(
     output
     |> string.split(on: "\n")
@@ -239,9 +240,7 @@ fn parse_old_test_dependency_param(
 
 const divider_line = "────────────────────────────────────────────────────────────────────────────────\n"
 
-pub fn parse_new_output(
-  output: String,
-) -> Result(#(List(Param), List(Test)), String) {
+pub fn parse_new_output(output: String) -> Result(ParseOutput, String) {
   let sections = string.split(output, on: divider_line)
 
   // expect 4 sections

@@ -33,7 +33,30 @@ type DiffSummary {
   DiffSummary(added: Int, removed: Int, changed: Int)
 }
 
-pub fn print_diff_summary(diffs: List(Diff(a))) -> Nil {
+pub fn println(s: String) {
+  io.println(s)
+}
+
+pub fn print_newline() {
+  io.println("")
+}
+
+pub fn print_params(diffs: List(Diff(Param)), include_unchanged: Bool) -> Nil {
+  io.println("========== PARAMETERS ==========")
+  print_params_diff(diffs, include_unchanged)
+  io.println("")
+  print_diff_summary(diffs)
+  io.println("")
+}
+
+pub fn print_tests(diffs: List(Diff(Test)), include_unchanged: Bool) -> Nil {
+  io.println("========== TESTS ==========")
+  print_tests_diff(diffs, include_unchanged)
+  io.println("")
+  print_diff_summary(diffs)
+}
+
+fn print_diff_summary(diffs: List(Diff(a))) -> Nil {
   let DiffSummary(added, removed, changed) =
     diffs
     |> list.fold(
@@ -62,10 +85,7 @@ pub fn print_diff_summary(diffs: List(Diff(a))) -> Nil {
   Nil
 }
 
-pub fn print_params_diff(
-  diffs: List(Diff(Param)),
-  include_unchanged: Bool,
-) -> Nil {
+fn print_params_diff(diffs: List(Diff(Param)), include_unchanged: Bool) -> Nil {
   print_diff(diffs, include_unchanged, param_compare, param_to_string)
 }
 
@@ -87,10 +107,7 @@ fn param_to_string(param: Param) -> String {
   param.name <> " = " <> value <> unit <> "  # " <> param.description
 }
 
-pub fn print_tests_diff(
-  diffs: List(Diff(Test)),
-  include_unchanged: Bool,
-) -> Nil {
+fn print_tests_diff(diffs: List(Diff(Test)), include_unchanged: Bool) -> Nil {
   print_diff(diffs, include_unchanged, test_compare, test_to_string)
 }
 
