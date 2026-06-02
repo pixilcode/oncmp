@@ -17,20 +17,30 @@ pub type Config {
   )
 }
 
-pub fn load(config_loc: Option(String)) -> Result(Config, String) {
+pub type Error {
+  FileReadError(path: String, message: String)
+  UnexpectedToken(got: String, expected: String)
+  KeyAlreadyInUse(key: List(String))
+  KeyNotFound(key: List(String))
+  KeyWrongType(key: List(String), expected: String, got: String)
+}
+
+pub fn load(config_loc: Option(String)) -> Result(Config, Error) {
   let config_loc = config_loc |> option.unwrap(or: default_config_loc)
   load_config(config_loc)
 }
 
-fn load_config(config_loc: String) -> Result(Config, String) {
+fn load_config(config_loc: String) -> Result(Config, Error) {
   use file_contents <- result.try(
     simplifile.read(config_loc)
-    |> result.map_error(simplifile.describe_error),
+    |> result.map_error(fn(error) {
+      FileReadError(path: config_loc, message: simplifile.describe_error(error))
+    }),
   )
 
   use toml_config <- result.try(
     tom.parse(file_contents)
-    |> result.map_error(describe_toml_parse_error),
+    |> result.map_error(toml_parse_error),
   )
 
   use ignore_params <- result.try(
@@ -40,7 +50,7 @@ fn load_config(config_loc: String) -> Result(Config, String) {
     |> result.map(list.map(_, tom.as_string))
     |> result.map(result.all)
     |> result.flatten()
-    |> result.map_error(describe_toml_get_error),
+    |> result.map_error(toml_get_error),
   )
 
   use ignore_tests <- result.try(
@@ -50,25 +60,25 @@ fn load_config(config_loc: String) -> Result(Config, String) {
     |> result.map(list.map(_, tom.as_string))
     |> result.map(result.all)
     |> result.flatten()
-    |> result.map_error(describe_toml_get_error),
+    |> result.map_error(toml_get_error),
   )
 
   use old_repo <- result.try(
     toml_config
     |> tom.get_string(["run", "old_repo"])
-    |> result.map_error(describe_toml_get_error),
+    |> result.map_error(toml_get_error),
   )
 
   use new_repo <- result.try(
     toml_config
     |> tom.get_string(["run", "new_repo"])
-    |> result.map_error(describe_toml_get_error),
+    |> result.map_error(toml_get_error),
   )
 
   use model_file <- result.try(
     toml_config
     |> tom.get_string(["run", "model_file"])
-    |> result.map_error(describe_toml_get_error),
+    |> result.map_error(toml_get_error),
   )
 
   Ok(Config(
@@ -80,37 +90,17 @@ fn load_config(config_loc: String) -> Result(Config, String) {
   ))
 }
 
-fn describe_toml_parse_error(error: tom.ParseError) -> String {
+fn toml_parse_error(error: tom.ParseError) -> Error {
   case error {
-    tom.Unexpected(got: got, expected: expected) -> {
-      "unexpected token: got '" <> got <> "', expected '" <> expected <> "'"
-    }
-
-    tom.KeyAlreadyInUse(key) -> {
-      let key_path = key |> key_to_string()
-      "key already in use: " <> key_path
-    }
+    tom.Unexpected(got:, expected:) -> UnexpectedToken(got:, expected:)
+    tom.KeyAlreadyInUse(key) -> KeyAlreadyInUse(key:)
   }
 }
 
-fn describe_toml_get_error(error: tom.GetError) -> String {
+fn toml_get_error(error: tom.GetError) -> Error {
   case error {
-    tom.NotFound(key) -> {
-      let key_path = key |> key_to_string()
-      "key not found: " <> key_path
-    }
-
-    tom.WrongType(key: key, expected: expected, got: got) -> {
-      let key_path = key |> key_to_string()
-
-      "key has wrong type: "
-      <> key_path
-      <> " expected '"
-      <> expected
-      <> "', got '"
-      <> got
-      <> "'"
-    }
+    tom.NotFound(key) -> KeyNotFound(key:)
+    tom.WrongType(key:, expected:, got:) -> KeyWrongType(key:, expected:, got:)
   }
 }
 
@@ -122,6 +112,25 @@ fn use_default_if_not_found(
     Ok(value) -> Ok(value)
     Error(tom.NotFound(_)) -> Ok(default)
     Error(error) -> Error(error)
+  }
+}
+
+pub fn error_to_string(error: Error) -> String {
+  case error {
+    FileReadError(path:, message:) ->
+      "failed to read config file " <> string.inspect(path) <> ": " <> message
+    UnexpectedToken(got:, expected:) ->
+      "unexpected token: got '" <> got <> "', expected '" <> expected <> "'"
+    KeyAlreadyInUse(key) -> "key already in use: " <> key_to_string(key)
+    KeyNotFound(key) -> "key not found: " <> key_to_string(key)
+    KeyWrongType(key:, expected:, got:) ->
+      "key has wrong type: "
+      <> key_to_string(key)
+      <> " expected '"
+      <> expected
+      <> "', got '"
+      <> got
+      <> "'"
   }
 }
 

@@ -24,9 +24,10 @@ pub fn run(context: Context) -> Result(Output, String) {
   let log = fn(s: String) { context.log("[main] " <> s) }
 
   log("loading config")
-  let config_result = config.load(context.config_loc)
-
-  use config <- result.try(config_result)
+  use config <- result.try(
+    config.load(context.config_loc)
+    |> result.map_error(config.error_to_string),
+  )
   log("loaded config")
 
   let load_output_context =
