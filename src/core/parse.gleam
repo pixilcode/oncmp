@@ -6,8 +6,30 @@ import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 
-pub type ParseOutput =
+pub type Output =
   #(List(Param), List(Test))
+
+pub type Error {
+  OldParamMissingColon(line: String)
+  OldParamMissingSpace(line: String, rest: String)
+  OldParamMissingDoubleDash(line: String, rest: String)
+  OldParamMissingQuote(line: String, rest: String)
+  OldTestMissingClosingParen(line: String)
+  OldTestMissingResult(line: String, rest: String)
+  OldTestInvalidResult(result: String, line: String)
+  NewOutputWrongSectionCount(section_count: Int)
+  NewParamMissingEquals(line: String)
+  NewParamMissingHash(line: String, rest: String)
+  NewTestGroupMissingModelDelimiter(group: String)
+  NewTestMissingResult(test_line: String)
+  NewTestInvalidResult(result: String, test_line: String)
+  NewTestDependencyParamMissingEquals(line: String)
+  InvalidInterval(
+    value: String,
+    min: Result(Float, Nil),
+    max: Result(Float, Nil),
+  )
+}
 
 pub type Param {
   Param(
@@ -42,7 +64,7 @@ pub type TestDependencyParam {
   )
 }
 
-pub fn parse_old_output(output: String) -> Result(ParseOutput, String) {
+pub fn parse_old_output(output: String) -> Result(Output, Error) {
   use params <- result.try(
     output
     |> string.split(on: "\n")
@@ -63,13 +85,11 @@ pub fn parse_old_output(output: String) -> Result(ParseOutput, String) {
   Ok(#(params, tests))
 }
 
-fn parse_old_param(line: String) -> Result(Param, String) {
+fn parse_old_param(line: String) -> Result(Param, Error) {
   use #(name, rest) <- result.try(
     line
     |> string.split_once(on: ":")
-    |> result.map_error(fn(_error) {
-      "error splitting old param on ':' for string: " <> string.inspect(line)
-    }),
+    |> result.map_error(fn(_error) { OldParamMissingColon(line:) }),
   )
   let name = name |> string.trim()
 
@@ -77,13 +97,7 @@ fn parse_old_param(line: String) -> Result(Param, String) {
     rest
     |> string.trim_start()
     |> string.split_once(on: " ")
-    |> result.map_error(fn(_error) {
-      "error splitting old param on ' ' for string: "
-      <> string.inspect(line)
-      <> " (rest: "
-      <> string.inspect(rest)
-      <> ")"
-    }),
+    |> result.map_error(fn(_error) { OldParamMissingSpace(line:, rest:) }),
   )
 
   // strings are printed out as `my_str | my_str`
@@ -105,13 +119,7 @@ fn parse_old_param(line: String) -> Result(Param, String) {
   use #(unit, rest) <- result.try(
     rest
     |> string.split_once(on: " -- \"")
-    |> result.map_error(fn(_error) {
-      "error splitting old param on ' -- \"' for string: "
-      <> string.inspect(line)
-      <> " (rest: "
-      <> string.inspect(rest)
-      <> ")"
-    }),
+    |> result.map_error(fn(_error) { OldParamMissingDoubleDash(line:, rest:) }),
   )
 
   let unit = case string.trim(unit) {
@@ -122,13 +130,7 @@ fn parse_old_param(line: String) -> Result(Param, String) {
   use #(description, _rest) <- result.try(
     rest
     |> string.split_once(on: "\"")
-    |> result.map_error(fn(_error) {
-      "error splitting old param on '\"' for string: "
-      <> string.inspect(line)
-      <> " (rest: "
-      <> string.inspect(rest)
-      <> ")"
-    }),
+    |> result.map_error(fn(_error) { OldParamMissingQuote(line:, rest:) }),
   )
 
   let description = string.trim(description)
@@ -136,7 +138,7 @@ fn parse_old_param(line: String) -> Result(Param, String) {
   Ok(Param(name: name, value: value, unit: unit, description: description))
 }
 
-fn parse_old_test(line: String) -> Result(Test, String) {
+fn parse_old_test(line: String) -> Result(Test, Error) {
   let line =
     line
     |> string.trim_start()
@@ -144,9 +146,7 @@ fn parse_old_test(line: String) -> Result(Test, String) {
   use #(model, rest) <- result.try(
     line
     |> string.split_once(on: ")")
-    |> result.map_error(fn(_error) {
-      "error splitting test on ')' for string: " <> string.inspect(line)
-    }),
+    |> result.map_error(fn(_error) { OldTestMissingClosingParen(line:) }),
   )
 
   let model = model |> string.trim()
@@ -157,13 +157,7 @@ fn parse_old_test(line: String) -> Result(Test, String) {
   use #(expression, rest) <- result.try(
     rest
     |> string.split_once(on: "\n\tResult: ")
-    |> result.map_error(fn(_error) {
-      "error splitting test on '\\n\\tResult: ' for string: "
-      <> string.inspect(line)
-      <> " (rest: "
-      <> string.inspect(rest)
-      <> ")"
-    }),
+    |> result.map_error(fn(_error) { OldTestMissingResult(line:, rest:) }),
   )
 
   let expression =
@@ -201,14 +195,7 @@ fn parse_old_test(line: String) -> Result(Test, String) {
 
       Ok(Fail(params: test_dependency_params))
     }
-    _ ->
-      Error(
-        "invalid test result: "
-        <> result
-        <> " (line: "
-        <> string.inspect(line)
-        <> ")",
-      )
+    _ -> Error(OldTestInvalidResult(result:, line:))
   })
 
   Ok(Test(model: model, expression: expression, result: result))
@@ -216,7 +203,7 @@ fn parse_old_test(line: String) -> Result(Test, String) {
 
 fn parse_old_test_dependency_param(
   line: String,
-) -> Result(Option(TestDependencyParam), String) {
+) -> Result(Option(TestDependencyParam), Error) {
   let result =
     line
     |> string.split_once(on: ":")
@@ -240,7 +227,7 @@ fn parse_old_test_dependency_param(
 
 const divider_line = "────────────────────────────────────────────────────────────────────────────────\n"
 
-pub fn parse_new_output(output: String) -> Result(ParseOutput, String) {
+pub fn parse_new_output(output: String) -> Result(Output, Error) {
   let sections = string.split(output, on: divider_line)
 
   // expect 4 sections
@@ -255,16 +242,9 @@ pub fn parse_new_output(output: String) -> Result(ParseOutput, String) {
   //
   // we say 3 because that's what the user will perceive visually
   use <- bool.lazy_guard(list.length(sections) != 4, fn() {
-    let list_length_str =
-      sections
-      |> list.length
-      |> int.subtract(1)
-      |> int.to_string
-
-    Error(
-      "expected 3 sections (model header, params, tests), got "
-      <> list_length_str,
-    )
+    Error(NewOutputWrongSectionCount(
+      section_count: sections |> list.length |> int.subtract(1),
+    ))
   })
 
   let assert [_empty, _model_header, params, tests] = sections
@@ -293,26 +273,18 @@ pub fn parse_new_output(output: String) -> Result(ParseOutput, String) {
   Ok(#(params, tests))
 }
 
-fn parse_new_param(line: String) -> Result(Param, String) {
+fn parse_new_param(line: String) -> Result(Param, Error) {
   use #(name, rest) <- result.try(
     line
     |> string.split_once(on: "=")
-    |> result.map_error(fn(_error) {
-      "error splitting param on '=' for string: " <> string.inspect(line)
-    }),
+    |> result.map_error(fn(_error) { NewParamMissingEquals(line:) }),
   )
   let name = name |> string.trim()
 
   use #(value_and_unit, description) <- result.try(
     rest
     |> string.split_once(on: "#")
-    |> result.map_error(fn(_error) {
-      "error splitting param on '#' for string: "
-      <> string.inspect(line)
-      <> " (rest: "
-      <> string.inspect(rest)
-      <> ")"
-    }),
+    |> result.map_error(fn(_error) { NewParamMissingHash(line:, rest:) }),
   )
 
   let #(value, unit) = case value_and_unit |> string.split_once(on: ":") {
@@ -327,14 +299,14 @@ fn parse_new_param(line: String) -> Result(Param, String) {
   Ok(Param(name: name, value: value, unit: unit, description: description))
 }
 
-fn parse_new_test_group(group: String) -> Result(List(Test), String) {
+fn parse_new_test_group(group: String) -> Result(List(Test), Error) {
   use <- bool.guard(when: group |> string.is_empty(), return: Ok([]))
 
   use #(model, rest) <- result.try(
     group
     |> string.split_once(on: ".on\n")
     |> result.map_error(fn(_error) {
-      "error parsing test group for string: " <> group
+      NewTestGroupMissingModelDelimiter(group:)
     }),
   )
 
@@ -348,14 +320,11 @@ fn parse_new_test_group(group: String) -> Result(List(Test), String) {
   |> result.all()
 }
 
-fn parse_new_test(model: String, test_: String) -> Result(Test, String) {
+fn parse_new_test(model: String, test_: String) -> Result(Test, Error) {
   use #(expression, rest) <- result.try(
     test_
     |> string.split_once(on: "\n  Result: ")
-    |> result.map_error(fn(_error) {
-      "error splitting test on '\\n  Result: ' for string: "
-      <> string.inspect(test_)
-    }),
+    |> result.map_error(fn(_error) { NewTestMissingResult(test_line: test_) }),
   )
 
   let expression = expression |> string.trim()
@@ -387,13 +356,7 @@ fn parse_new_test(model: String, test_: String) -> Result(Test, String) {
 
       Ok(Fail(params: test_dependency_params))
     }
-    _ ->
-      Error(
-        "invalid test result: "
-        <> result
-        <> " for string: "
-        <> string.inspect(test_),
-      )
+    _ -> Error(NewTestInvalidResult(result:, test_line: test_))
   })
 
   Ok(Test(model: model, expression: expression, result: result))
@@ -401,7 +364,7 @@ fn parse_new_test(model: String, test_: String) -> Result(Test, String) {
 
 fn parse_new_test_dependency_param(
   line: String,
-) -> Result(Option(TestDependencyParam), String) {
+) -> Result(Option(TestDependencyParam), Error) {
   use <- bool.guard(when: line |> string.is_empty(), return: Ok(None))
 
   let line =
@@ -414,8 +377,7 @@ fn parse_new_test_dependency_param(
     line
     |> string.split_once(on: " = ")
     |> result.map_error(fn(_error) {
-      "error splitting test dependency param on ' = ' for string: "
-      <> string.inspect(line)
+      NewTestDependencyParamMissingEquals(line:)
     }),
   )
 
@@ -431,7 +393,7 @@ fn parse_new_test_dependency_param(
   Ok(Some(TestDependencyParam(name: name, value: value, unit: unit)))
 }
 
-fn parse_param_value(value: String) -> Result(ParamValue, String) {
+fn parse_param_value(value: String) -> Result(ParamValue, Error) {
   let try_interval = value |> string.split_once(on: "|")
 
   case try_interval {
@@ -451,15 +413,7 @@ fn parse_param_value(value: String) -> Result(ParamValue, String) {
       case min, max {
         Ok(min), Ok(max) -> Ok(Interval(min: min, max: max))
         Error(Nil), Error(Nil) if min == max -> Ok(String(value: value))
-        _, _ ->
-          Error(
-            "invalid interval: "
-            <> value
-            <> "\n"
-            <> string.inspect(min)
-            <> "\n"
-            <> string.inspect(max),
-          )
+        _, _ -> Error(InvalidInterval(value:, min:, max:))
       }
     }
 
@@ -504,4 +458,74 @@ fn parse_int_or_float(value: String) -> Result(Float, Nil) {
     |> int.parse()
     |> result.map(int.to_float)
   })
+}
+
+pub fn error_to_string(error: Error) -> String {
+  case error {
+    OldParamMissingColon(line:) ->
+      "error splitting old param on ':' for string: " <> string.inspect(line)
+    OldParamMissingSpace(line:, rest:) ->
+      "error splitting old param on ' ' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    OldParamMissingDoubleDash(line:, rest:) ->
+      "error splitting old param on ' -- \"' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    OldParamMissingQuote(line:, rest:) ->
+      "error splitting old param on '\"' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    OldTestMissingClosingParen(line:) ->
+      "error splitting test on ')' for string: " <> string.inspect(line)
+    OldTestMissingResult(line:, rest:) ->
+      "error splitting test on '\\n\\tResult: ' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    OldTestInvalidResult(result:, line:) ->
+      "invalid test result: "
+      <> result
+      <> " (line: "
+      <> string.inspect(line)
+      <> ")"
+    NewOutputWrongSectionCount(section_count:) ->
+      "expected 3 sections (model header, params, tests), got "
+      <> int.to_string(section_count)
+    NewParamMissingEquals(line:) ->
+      "error splitting param on '=' for string: " <> string.inspect(line)
+    NewParamMissingHash(line:, rest:) ->
+      "error splitting param on '#' for string: "
+      <> string.inspect(line)
+      <> " (rest: "
+      <> string.inspect(rest)
+      <> ")"
+    NewTestGroupMissingModelDelimiter(group:) ->
+      "error parsing test group for string: " <> group
+    NewTestMissingResult(test_line:) ->
+      "error splitting test on '\\n  Result: ' for string: "
+      <> string.inspect(test_line)
+    NewTestInvalidResult(result:, test_line:) ->
+      "invalid test result: "
+      <> result
+      <> " for string: "
+      <> string.inspect(test_line)
+    NewTestDependencyParamMissingEquals(line:) ->
+      "error splitting test dependency param on ' = ' for string: "
+      <> string.inspect(line)
+    InvalidInterval(value:, min:, max:) ->
+      "invalid interval: "
+      <> value
+      <> "\n"
+      <> string.inspect(min)
+      <> "\n"
+      <> string.inspect(max)
+  }
 }

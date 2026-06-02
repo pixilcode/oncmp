@@ -1,4 +1,4 @@
-import core/parse.{type ParseOutput}
+import core/parse
 import core/run
 import gleam/bool
 import gleam/erlang/process.{type Subject}
@@ -12,18 +12,18 @@ pub type LoadOutputContext {
 
 pub type LoadOutputState {
   Uninitialized
-  Complete(Result(ParseOutput, String))
+  Complete(Result(parse.Output, String))
 }
 
 pub type LoadOutputMessage {
   Run(repo: String, model_file: String)
-  GetResult(Subject(Result(ParseOutput, String)))
+  GetResult(Subject(Result(parse.Output, String)))
 }
 
 pub fn handle_message(
   name: String,
   run_fn: fn(String, String) -> Result(String, run.Error),
-  parse_fn: fn(String) -> Result(ParseOutput, String),
+  parse_fn: fn(String) -> Result(parse.Output, parse.Error),
   context: LoadOutputContext,
 ) -> fn(LoadOutputState, LoadOutputMessage) ->
   actor.Next(LoadOutputState, LoadOutputMessage) {
@@ -34,7 +34,7 @@ pub fn handle_message(
   fn(state, message) {
     case state, message {
       Uninitialized, Run(repo, model_file) -> {
-        let result: Result(ParseOutput, String) = {
+        let result: Result(parse.Output, String) = {
           // run the program
           log(name, "running program")
           let output_result =
@@ -65,6 +65,8 @@ pub fn handle_message(
 
           parse_result
           |> result.map_error(fn(error) {
+            let error = parse.error_to_string(error)
+
             use <- bool.guard(!context.print_source_on_parse_error, error)
 
             let output = output |> string.replace(each: "\n", with: "\n    ")
