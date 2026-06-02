@@ -83,6 +83,12 @@ pub fn run(context: Context) -> Result(Output, String) {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
+    |> result.map_error(fn(error) {
+      load_output_actor.error_to_string(
+        error,
+        context.print_source_on_parse_error,
+      )
+    })
 
   use #(old_params, old_tests) <- result.try(old_actor_output)
 
@@ -92,6 +98,12 @@ pub fn run(context: Context) -> Result(Output, String) {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
+    |> result.map_error(fn(error) {
+      load_output_actor.error_to_string(
+        error,
+        context.print_source_on_parse_error,
+      )
+    })
 
   use #(new_params, new_tests) <- result.try(new_actor_output)
   log("actors completed")
