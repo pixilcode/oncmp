@@ -1,37 +1,20 @@
+import core/main
+import gleam/option.{type Option}
+import server/template
+import server/web
 import wisp.{type Request, type Response}
 
-import server/web
+pub type RouterContext {
+  Context(config_loc: Option(String))
+}
 
-pub fn handle_request(req: Request) -> Response {
+pub fn handle_request(req: Request, config_loc: Option(String)) -> Response {
   use _req <- web.middleware(req)
 
-  wisp.html_response(page(), 200)
+  // run the diff algorithm
+  let context = main.Context(log: wisp.log_info, config_loc:)
+  let result = main.run(context)
+
+  let page_html = template.page(result)
+  wisp.html_response(page_html, 200)
 }
-
-fn page() -> String {
-  let body = todo
-
-  "
-  <!DOCTYPE html>
-  <html lang=\"en\">
-    <head>
-    " <> head <> "
-    </head>
-    <body>
-    " <> body <> "
-    </body>
-  </html>
-  "
-}
-
-const head = "
-  <meta charset=\"utf-8\">
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
-  <title>Wisp Example</title>
-  <style>
-  "
-  <> styles
-  <> "
-  </style>"
-
-const styles = ""

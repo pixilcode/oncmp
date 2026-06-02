@@ -8,6 +8,7 @@ pub type Args {
     include_unchanged: Bool,
     show_help: Bool,
     print_source_on_parse_error: Bool,
+    serve: Bool,
   )
 }
 
@@ -22,6 +23,7 @@ Options:
   -p, --params                         Show only parameter diffs
   -i, --include-unchanged              Include unchanged items in output
   -e, --print_source_on_parse_error    Print the source on parse errors
+  -s, --serve                          Run a web server instead of the CLI
 "
 
 pub type Mode {
@@ -37,6 +39,7 @@ fn default_args() -> Args {
     include_unchanged: False,
     show_help: False,
     print_source_on_parse_error: False,
+    serve: False,
   )
 }
 
@@ -75,6 +78,9 @@ fn parse_args_inner(
     }
     ["--print-source-on-parse-error", ..rest] | ["-e", ..rest] -> {
       parse_args_inner(rest, Args(..args, print_source_on_parse_error: True))
+    }
+    ["--serve", ..rest] | ["-s", ..rest] -> {
+      parse_args_inner(rest, Args(..args, serve: True))
     }
     [arg, ..] -> {
       Error("invalid arg: " <> arg)

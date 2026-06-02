@@ -3,6 +3,7 @@ import argv
 import cli/main as cli_main
 import cli/print
 import gleam/bool
+import server/main as server_main
 import util
 
 pub fn main() -> Nil {
@@ -18,5 +19,9 @@ pub fn main() -> Nil {
     Nil
   })
 
+  case args.serve {
+    True -> server_main.run(args)
+    False -> cli_main.run(args)
+  }
   cli_main.run(args)
 }
