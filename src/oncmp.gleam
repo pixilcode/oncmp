@@ -18,18 +18,13 @@ pub fn main() -> Nil {
     Nil
   })
 
-  let context =
-    main.Context(
-      log: print.println,
-      config_loc: args.config_loc,
-      print_source_on_parse_error: args.print_source_on_parse_error,
-    )
+  let context = main.Context(log: print.println, config_loc: args.config_loc)
 
   let result = main.run(context)
 
   use output <- util.try_or_return_lazy(result, fn(error) {
     error
-    |> main.error_to_string(context.print_source_on_parse_error)
+    |> main.error_to_string(args.print_source_on_parse_error)
     |> print.print_error
   })
 

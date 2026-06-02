@@ -7,7 +7,7 @@ import gleam/result
 import gleam/string
 
 pub type Context {
-  Context(print_source_on_parse_error: Bool, log_fn: fn(String) -> Nil)
+  Context(log_fn: fn(String) -> Nil)
 }
 
 pub type State {

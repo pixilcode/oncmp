@@ -9,11 +9,7 @@ import gleam/result
 import gleam/string
 
 pub type Context {
-  Context(
-    log: fn(String) -> Nil,
-    config_loc: Option(String),
-    print_source_on_parse_error: Bool,
-  )
+  Context(log: fn(String) -> Nil, config_loc: Option(String))
 }
 
 pub type Output {
@@ -37,11 +33,7 @@ pub fn run(context: Context) -> Result(Output, Error) {
   )
   log("loaded config")
 
-  let load_output_context =
-    load_output_actor.Context(
-      print_source_on_parse_error: context.print_source_on_parse_error,
-      log_fn: context.log,
-    )
+  let load_output_context = load_output_actor.Context(log_fn: context.log)
 
   // initialize the "run and parse" actors for old and new Oneil
   log("initializing actors")
