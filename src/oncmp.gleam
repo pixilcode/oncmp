@@ -20,8 +20,7 @@ pub fn main() -> Nil {
     |> args.parse_args()
     |> result.map_error(print.print_error_and_help)
 
-  use <- bool.guard(when: parsed_args |> result.is_error(), return: Nil)
-  let assert Ok(args) = parsed_args
+  use args <- try_or_return(parsed_args, Nil)
 
   use <- bool.lazy_guard(when: args.show_help, return: fn() {
     print.print_help()
@@ -37,8 +36,7 @@ pub fn main() -> Nil {
     config.load(args.config_loc)
     |> result.map_error(print.print_error_and_help)
 
-  use <- bool.guard(when: config |> result.is_error(), return: Nil)
-  let assert Ok(config) = config
+  use config <- try_or_return(config, Nil)
   io.println("done")
 
   // initialize the "run and parse" actors for old and new Oneil
@@ -53,7 +51,7 @@ pub fn main() -> Nil {
     |> actor.start
     |> result.map_error(actor_start_error_to_string)
 
-  use old_actor <- try_or_return(old_actor_result, Nil)
+  use old_actor <- try_or_return_with_error(old_actor_result, Nil)
 
   let new_actor_result =
     actor.new(load_output_actor.Uninitialized)
@@ -66,7 +64,7 @@ pub fn main() -> Nil {
     |> actor.start
     |> result.map_error(actor_start_error_to_string)
 
-  use new_actor <- try_or_return(new_actor_result, Nil)
+  use new_actor <- try_or_return_with_error(new_actor_result, Nil)
 
   // run the actors
   actor.send(
@@ -86,7 +84,11 @@ pub fn main() -> Nil {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
-  use #(old_params, old_tests) <- try_or_return(old_actor_output, Nil)
+
+  use #(old_params, old_tests) <- try_or_return_with_error(
+    old_actor_output,
+    Nil,
+  )
 
   let new_actor_output =
     actor.call(
@@ -94,7 +96,11 @@ pub fn main() -> Nil {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
-  use #(new_params, new_tests) <- try_or_return(new_actor_output, Nil)
+
+  use #(new_params, new_tests) <- try_or_return_with_error(
+    new_actor_output,
+    Nil,
+  )
 
   // compare the params and tests
   io.print("diffing params ... ")
@@ -130,7 +136,16 @@ pub fn main() -> Nil {
   Nil
 }
 
-fn try_or_return(
+fn try_or_return(result: Result(a, e), default: b, handle: fn(a) -> b) -> b {
+  case result {
+    Ok(value) -> handle(value)
+    Error(_error) -> {
+      default
+    }
+  }
+}
+
+fn try_or_return_with_error(
   result: Result(a, String),
   default: b,
   handle: fn(a) -> b,
