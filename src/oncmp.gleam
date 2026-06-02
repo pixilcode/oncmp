@@ -1,8 +1,11 @@
 import argv
 import gleam/bool
 import gleam/io
+import gleam/otp/actor
 import gleam/result
+import gleam/string
 
+import actor/load_output as load_output_actor
 import args.{All, Params, Tests}
 import config
 import diff.{type Diff}
@@ -38,71 +41,60 @@ pub fn main() -> Nil {
   let assert Ok(config) = config
   io.println("done")
 
-  // get the output from running the old and new versions of Oneil
-  io.print("running old Oneil ... ")
-  let old_output_result = run.run_old(config.old_repo, config.model_file)
-  io.println("done")
+  // initialize the "run and parse" actors for old and new Oneil
+  let old_actor_result =
+    actor.new(load_output_actor.Uninitialized)
+    |> actor.on_message(load_output_actor.handle_message(
+      "old",
+      run.run_old,
+      parse.parse_old_output,
+      args.print_source_on_parse_error,
+    ))
+    |> actor.start
+    |> result.map_error(actor_start_error_to_string)
 
-  let _ =
-    old_output_result
-    |> result.map_error(fn(error) { print.print_error(error) })
+  use old_actor <- try_or_return(old_actor_result, Nil)
 
-  use <- bool.guard(when: old_output_result |> result.is_error(), return: Nil)
-  let assert Ok(old_output) = old_output_result
+  let new_actor_result =
+    actor.new(load_output_actor.Uninitialized)
+    |> actor.on_message(load_output_actor.handle_message(
+      "new",
+      run.run_new,
+      parse.parse_new_output,
+      args.print_source_on_parse_error,
+    ))
+    |> actor.start
+    |> result.map_error(actor_start_error_to_string)
 
-  io.print("running new Oneil ... ")
-  let new_output_result = run.run_new(config.new_repo, config.model_file)
-  io.println("done")
+  use new_actor <- try_or_return(new_actor_result, Nil)
 
-  let _ =
-    new_output_result
-    |> result.map_error(fn(error) { print.print_error(error) })
+  // run the actors
+  actor.send(
+    old_actor.data,
+    load_output_actor.Run(config.old_repo, config.model_file),
+  )
 
-  use <- bool.guard(when: new_output_result |> result.is_error(), return: Nil)
-  let assert Ok(new_output) = new_output_result
+  actor.send(
+    new_actor.data,
+    load_output_actor.Run(config.new_repo, config.model_file),
+  )
 
-  // process the output to get the params and tests
-  io.print("parsing old output ... ")
-  let old_output_result = parse.parse_old_output(old_output)
-  io.println("done")
+  // get the results
+  let old_actor_output =
+    actor.call(
+      old_actor.data,
+      waiting: 1_000_000,
+      sending: load_output_actor.GetResult,
+    )
+  use #(old_params, old_tests) <- try_or_return(old_actor_output, Nil)
 
-  // print the error if there is one
-  let _ =
-    old_output_result
-    |> result.map_error(fn(error) {
-      print.print_error(error)
-      case args.print_source_on_parse_error {
-        True -> {
-          io.println("source:")
-          io.println(old_output)
-        }
-        False -> Nil
-      }
-    })
-
-  use <- bool.guard(when: old_output_result |> result.is_error(), return: Nil)
-  let assert Ok(#(old_params, old_tests)) = old_output_result
-
-  io.print("parsing new output ... ")
-  let new_output_result = parse.parse_new_output(new_output)
-  io.println("done")
-
-  // print the error if there is one
-  let _ =
-    new_output_result
-    |> result.map_error(fn(error) {
-      print.print_error(error)
-      case args.print_source_on_parse_error {
-        True -> {
-          io.println("source:")
-          io.println(new_output)
-        }
-        False -> Nil
-      }
-    })
-
-  use <- bool.guard(when: new_output_result |> result.is_error(), return: Nil)
-  let assert Ok(#(new_params, new_tests)) = new_output_result
+  let new_actor_output =
+    actor.call(
+      new_actor.data,
+      waiting: 1_000_000,
+      sending: load_output_actor.GetResult,
+    )
+  use #(new_params, new_tests) <- try_or_return(new_actor_output, Nil)
 
   // compare the params and tests
   io.print("diffing params ... ")
@@ -133,6 +125,29 @@ pub fn main() -> Nil {
   }
 
   Nil
+}
+
+fn try_or_return(
+  result: Result(a, String),
+  default: b,
+  handle: fn(a) -> b,
+) -> b {
+  case result {
+    Ok(value) -> handle(value)
+    Error(error) -> {
+      print.print_error(error)
+      default
+    }
+  }
+}
+
+fn actor_start_error_to_string(error: actor.StartError) -> String {
+  case error {
+    actor.InitTimeout -> "actor initialization timed out"
+    actor.InitFailed(message) -> "actor initialization failed: " <> message
+    actor.InitExited(reason) ->
+      "actor initialization exited: " <> string.inspect(reason)
+  }
 }
 
 fn print_params(diffs: List(Diff(Param)), include_unchanged: Bool) -> Nil {
