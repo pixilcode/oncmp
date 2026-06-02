@@ -124,6 +124,9 @@ pub fn main() -> Nil {
     }
   }
 
+  // add a blank line at the end of the output
+  io.println("")
+
   Nil
 }
 
