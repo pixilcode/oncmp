@@ -27,7 +27,11 @@ pub fn main() -> Nil {
 
   let result = main.run(context)
 
-  use output <- util.try_or_return_lazy(result, print.print_error)
+  use output <- util.try_or_return_lazy(result, fn(error) {
+    error
+    |> main.error_to_string(context.print_source_on_parse_error)
+    |> print.print_error
+  })
 
   // add a blank line between the logs and the results
   print.print_newline()

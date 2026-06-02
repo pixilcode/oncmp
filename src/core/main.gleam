@@ -20,13 +20,20 @@ pub type Output {
   Output(param_diffs: List(Diff(Param)), test_diffs: List(Diff(Test)))
 }
 
-pub fn run(context: Context) -> Result(Output, String) {
+pub type Error {
+  ConfigError(error: config.Error)
+  ActorError(error: String)
+  RunError(error: run.Error)
+  ParseError(error: parse.Error, source: String)
+}
+
+pub fn run(context: Context) -> Result(Output, Error) {
   let log = fn(s: String) { context.log("[main] " <> s) }
 
   log("loading config")
   use config <- result.try(
     config.load(context.config_loc)
-    |> result.map_error(config.error_to_string),
+    |> result.map_error(ConfigError),
   )
   log("loaded config")
 
@@ -47,7 +54,9 @@ pub fn run(context: Context) -> Result(Output, String) {
       load_output_context,
     ))
     |> actor.start
-    |> result.map_error(actor_start_error_to_string)
+    |> result.map_error(fn(error) {
+      ActorError(error: actor_start_error_to_string(error))
+    })
 
   use old_actor <- result.try(old_actor_result)
 
@@ -60,7 +69,9 @@ pub fn run(context: Context) -> Result(Output, String) {
       load_output_context,
     ))
     |> actor.start
-    |> result.map_error(actor_start_error_to_string)
+    |> result.map_error(fn(error) {
+      ActorError(error: actor_start_error_to_string(error))
+    })
 
   use new_actor <- result.try(new_actor_result)
   log("actors initialized")
@@ -84,12 +95,7 @@ pub fn run(context: Context) -> Result(Output, String) {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
-    |> result.map_error(fn(error) {
-      load_output_actor.error_to_string(
-        error,
-        context.print_source_on_parse_error,
-      )
-    })
+    |> result.map_error(load_output_error_to_error)
 
   use #(old_params, old_tests) <- result.try(old_actor_output)
 
@@ -99,12 +105,7 @@ pub fn run(context: Context) -> Result(Output, String) {
       waiting: 1_000_000,
       sending: load_output_actor.GetResult,
     )
-    |> result.map_error(fn(error) {
-      load_output_actor.error_to_string(
-        error,
-        context.print_source_on_parse_error,
-      )
-    })
+    |> result.map_error(load_output_error_to_error)
 
   use #(new_params, new_tests) <- result.try(new_actor_output)
   log("actors completed")
@@ -118,6 +119,29 @@ pub fn run(context: Context) -> Result(Output, String) {
   log("finished diffs")
 
   Ok(Output(params_diff, tests_diff))
+}
+
+pub fn error_to_string(
+  error: Error,
+  print_source_on_parse_error: Bool,
+) -> String {
+  case error {
+    ConfigError(error:) -> config.error_to_string(error)
+    ActorError(error:) -> error
+    RunError(error:) -> run.error_to_string(error)
+    ParseError(error:, source:) ->
+      load_output_actor.error_to_string(
+        load_output_actor.ParseError(error:, source:),
+        print_source_on_parse_error,
+      )
+  }
+}
+
+fn load_output_error_to_error(error: load_output_actor.Error) -> Error {
+  case error {
+    load_output_actor.RunError(error:) -> RunError(error:)
+    load_output_actor.ParseError(error:, source:) -> ParseError(error:, source:)
+  }
 }
 
 fn actor_start_error_to_string(error: actor.StartError) -> String {
