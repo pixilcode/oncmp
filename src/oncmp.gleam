@@ -11,6 +11,7 @@ import print
 import run
 
 pub fn main() -> Nil {
+  // load the args
   let parsed_args =
     argv.load().arguments
     |> args.parse_args()
@@ -39,12 +40,26 @@ pub fn main() -> Nil {
 
   // get the output from running the old and new versions of Oneil
   io.print("running old Oneil ... ")
-  let old_output = run.run_old(config.old_repo, config.model_file)
+  let old_output_result = run.run_old(config.old_repo, config.model_file)
   io.println("done")
 
+  let _ =
+    old_output_result
+    |> result.map_error(fn(error) { print.print_error(error) })
+
+  use <- bool.guard(when: old_output_result |> result.is_error(), return: Nil)
+  let assert Ok(old_output) = old_output_result
+
   io.print("running new Oneil ... ")
-  let new_output = run.run_new(config.new_repo, config.model_file)
+  let new_output_result = run.run_new(config.new_repo, config.model_file)
   io.println("done")
+
+  let _ =
+    new_output_result
+    |> result.map_error(fn(error) { print.print_error(error) })
+
+  use <- bool.guard(when: new_output_result |> result.is_error(), return: Nil)
+  let assert Ok(new_output) = new_output_result
 
   // process the output to get the params and tests
   io.print("parsing old output ... ")
