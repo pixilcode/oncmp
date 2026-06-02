@@ -242,24 +242,44 @@ const divider_line = "───────────────────�
 pub fn parse_new_output(
   output: String,
 ) -> Result(#(List(Param), List(Test)), String) {
+  let sections = string.split(output, on: divider_line)
+
+  // expect 4 sections
+  //
+  //     <empty>
+  //     ---------------
+  //     <model header>
+  //     ---------------
+  //     <params>
+  //     ---------------
+  //     <tests>
+  //
+  // we say 3 because that's what the user will perceive visually
+  use <- bool.lazy_guard(list.length(sections) != 4, fn() {
+    let list_length_str =
+      sections
+      |> list.length
+      |> int.subtract(1)
+      |> int.to_string
+
+    Error(
+      "expected 3 sections (model header, params, tests), got "
+      <> list_length_str,
+    )
+  })
+
+  let assert [_empty, _model_header, params, tests] = sections
+
+  // try to parse the params
   use params <- result.try(
-    output
+    params
+    |> string.trim()
     |> string.split(on: "\n")
-    |> list.filter(fn(line) { line |> string.contains("#") })
     |> list.map(parse_new_param)
     |> result.all(),
   )
 
-  use tests <- result.try(
-    output
-    |> string.split(on: divider_line)
-    // drop before the first divider line and
-    // the params before the second divider line
-    |> list.drop(2)
-    |> list.first()
-    |> result.map_error(fn(_error) { "no tests found in output" }),
-  )
-
+  // try to parse the tests
   use tests <- result.try(
     tests
     |> string.split(on: "\n\n")

@@ -23,13 +23,13 @@ pub fn run_new(new_repo: String, model_file: String) -> Result(String, String) {
     <> new_repo
     <> " && "
     <> "source .venv/bin/activate && "
-    <> "cd model/ &&"
+    <> "cd model/ && "
     <> "oneil eval "
     <> model_file
-    <> " --print all --no-header --no-test-report && "
+    <> " --print all && "
     <> "oneil test "
     <> model_file
-    <> " --no-header --recursive"
+    <> " --recursive"
 
   run_command(command, new_repo)
 }
