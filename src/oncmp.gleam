@@ -1,17 +1,16 @@
+import args.{All, Params, Tests}
 import argv
+import cli/print
+import config
+import core/diff.{type Diff}
+import core/load_output_actor
+import core/parse.{type Param, type Test}
+import core/run
 import gleam/bool
 import gleam/io
 import gleam/otp/actor
 import gleam/result
 import gleam/string
-
-import actor/load_output as load_output_actor
-import args.{All, Params, Tests}
-import config
-import diff.{type Diff}
-import parse.{type Param, type Test}
-import print
-import run
 
 pub fn main() -> Nil {
   // load the args

@@ -6,8 +6,8 @@ import gleam/order
 import gleam/string
 
 import args
-import diff.{type Diff, Different, NewOnly, OldOnly, Same}
-import parse.{
+import core/diff.{type Diff, Different, NewOnly, OldOnly, Same}
+import core/parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
   EmptyInterval, Fail, Interval, Pass, Scalar, String,
 }
@@ -87,7 +87,10 @@ fn param_to_string(param: Param) -> String {
   param.name <> " = " <> value <> unit <> "  # " <> param.description
 }
 
-pub fn print_tests_diff(diffs: List(Diff(Test)), include_unchanged: Bool) -> Nil {
+pub fn print_tests_diff(
+  diffs: List(Diff(Test)),
+  include_unchanged: Bool,
+) -> Nil {
   print_diff(diffs, include_unchanged, test_compare, test_to_string)
 }
 

@@ -5,7 +5,7 @@ import gleam/otp/actor
 import gleam/result
 import gleam/string
 
-import parse.{type Param, type Test}
+import core/parse.{type Param, type Test}
 
 pub type LoadOutputState {
   Uninitialized

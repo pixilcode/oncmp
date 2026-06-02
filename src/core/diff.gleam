@@ -4,7 +4,7 @@ import gleam/float
 import gleam/list
 import gleam/result
 
-import parse.{
+import core/parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
   type TestResult, EmptyInterval, Fail, Interval, Pass, Scalar, String,
 }

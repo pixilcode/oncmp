@@ -3,3 +3,4 @@
 /build
 erl_crash.dump
 oncmp_config.toml
+/oncmp
