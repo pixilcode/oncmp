@@ -7,7 +7,7 @@ Compare parameters and regression tests between two versions of [Oneil](https://
 <!-- TODO: improve this so that it better describes the requirements -->
 
 - [Gleam](https://gleam.run/) (and `gleescript` for building the standalone binary)
-- Two model repo checkouts: one for the old CLI, one for the new
+- Two model repo checkouts: one for the old CLI, one for the new (for more details, see [_Model Repo Setup_](#model-repo-setup))
 - A virtualenv (`.venv`) in each repo with `oneil` and/or other Python requirements installed
 
 ## Build & install
@@ -37,8 +37,43 @@ oncmp [OPTIONS]
 | `-p`, `--params` | Show only parameter diffs |
 | `-t`, `--tests` | Show only test diffs |
 | `-i`, `--include-unchanged` | Include unchanged items in the output |
+| `-e`, `--print-source-on-parse-error` | Print the output that is being parsed when a parse error is encountered |
+| `-s`, `--serve` | Display the results in a web server instead of in the CLI |
+
 
 The tool runs the old and new Oneil commands as configured, parses their output, diffs parameters and tests (respecting ignore lists), then prints the diff and a summary (added/removed/changed).
+
+
+## Running the Server
+
+![An example of the server running](docs/oncmp-server-example.png)
+
+When the `--serve` or `-s` option is provided, `oncmp` is run as a server, and
+the output is displayed at on localhost on port 8000 (`127.0.0.1:8000`).
+
+Each time the page is refreshed, `oncmp` runs its diff algorithm again and
+displays the results. The page allows you to control what is displayed
+dynamically using checkboxes.
+
+In addition, it is possible to control whether or not the checkboxes should be
+checked using query parameters. A value of `true` or `t` indicates that it
+should be checked by default, any other value indicates that it should be
+unchecked by default. Query parameters can be chained with `&`.
+
+| Checkbox | Corresponding Query Parameter |
+|-----------------|------------------------|
+| Show Parameters | show_params |
+| Show Tests | show_tests |
+| Show Unchanged | show_unchanged |
+| Show Error Source | show_error_source |
+
+### Examples
+
+```
+http://127.0.0.1/?show_params=true
+http://127.0.0.1/?show_tests=true
+http://127.0.0.1/?show_error_source=false&show_unchanged=true
+```
 
 ## Configuration file
 
@@ -81,3 +116,17 @@ model_file = "models/example.on"
 params = ["already_verified_param"]
 tests = ["known_flaky_test"]
 ```
+
+## Model Repo Setup
+
+The purpose of `oncmp` is to perform regression testing on two different
+versions of Oneil. Specifically, the old version of Oneil is
+[0.14.1](https://github.com/careweather/oneil/releases/tag/0.14.1), while the
+new version is
+[0.16.0](https://github.com/careweather/oneil/commit/d891d7b1555a938dfe6bb6a3cab180a502620d5c)
+
+For `oncmp` to work, you need to set up two versions of the repo with the models
+that you'd like to perform regression testing on. The first repo, stored in the
+config file under the key `run.old_repo`, should have Oneil 0.14.1 installed in
+the virtual environment. The second repo, stored in the config file under the
+key `run.new_repo`, uses Oneil 0.16.0, which should be installed on PATH.

@@ -22,8 +22,8 @@ Options:
   -t, --tests                          Show only test diffs
   -p, --params                         Show only parameter diffs
   -i, --include-unchanged              Include unchanged items in output
-  -e, --print_source_on_parse_error    Print the source on parse errors
-  -s, --serve                          Run a web server instead of the CLI
+  -e, --print-source-on-parse-error    Print the output that is being parsed when a parse error is encountered
+  -s, --serve                          Display the results in a web server instead of in the CLI
 "
 
 pub type Mode {
