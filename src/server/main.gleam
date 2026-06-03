@@ -11,13 +11,7 @@ pub fn run(args: args.Args) {
 
   let secret_key_base = wisp.random_string(64)
 
-  let template_config =
-    template.Config(
-      show_params_default: True,
-      show_tests_default: True,
-      show_unchanged_default: False,
-      show_error_source_default: False,
-    )
+  let template_config = config_from_args(args)
 
   let assert Ok(_) =
     wisp_mist.handler(
@@ -29,4 +23,23 @@ pub fn run(args: args.Args) {
     |> mist.start
 
   process.sleep_forever()
+}
+
+fn config_from_args(args: args.Args) -> template.Config {
+  let #(show_params_default, show_tests_default) = case args.mode {
+    args.All -> #(True, True)
+    args.Params -> #(True, False)
+    args.Tests -> #(False, True)
+  }
+
+  let show_unchanged_default = args.include_unchanged
+
+  let show_error_source_default = args.print_source_on_parse_error
+
+  template.Config(
+    show_params_default:,
+    show_tests_default:,
+    show_unchanged_default:,
+    show_error_source_default:,
+  )
 }
