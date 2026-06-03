@@ -11,6 +11,7 @@ import gleam/int
 import gleam/list
 import gleam/order
 import gleam/string
+import server/style
 
 pub fn page(output: Result(main.Output, main.Error)) -> String {
   let body = body_from(output)
@@ -32,18 +33,18 @@ const head = "
   <meta charset=\"utf-8\">
   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
   <title>oncmp</title>
+  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
+  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
+  <link href=\"https://fonts.googleapis.com/css2?family=Fira+Mono:wght@400;500;700&display=swap\" rel=\"stylesheet\">
   <style>
   "
-  <> styles
+  <> style.styles
   <> "
   </style>
   "
 
-const styles = "
-"
-
 fn body_from(output: Result(main.Output, main.Error)) -> String {
-  let main_section = case output {
+  let main_sections = case output {
     Ok(output) -> output_to_html(output)
     Error(error) -> error_to_html(error)
   }
@@ -51,13 +52,13 @@ fn body_from(output: Result(main.Output, main.Error)) -> String {
   "
   <h1>oncmp</h1>
   <main>
-  " <> main_section <> "
+  " <> main_sections <> "
   </main>
   "
 }
 
 fn output_to_html(output: main.Output) -> String {
-  "
+  output_controls_section() <> "
   <section class=\"params\">
     <h2>Parameters</h2>
   " <> params_diff_to_html(output.param_diffs) <> "
@@ -65,6 +66,16 @@ fn output_to_html(output: main.Output) -> String {
   <section class=\"tests\">
     <h2>Tests</h2>
   " <> tests_diff_to_html(output.test_diffs) <> "
+  </section>
+  "
+}
+
+fn output_controls_section() {
+  "
+  <section class=\"controls\">
+    " <> checkbox("Show Parameters", True) <> "
+    " <> checkbox("Show Tests", True) <> "
+    " <> checkbox("Show Unchanged", False) <> "
   </section>
   "
 }
@@ -102,24 +113,45 @@ fn diff_section_to_html(
 }
 
 fn diff_to_html(diff: Diff(a), to_string: fn(a) -> String) -> String {
-  case diff {
-    OldOnly(a) ->
-      "<li class=\"diff diff-removed\"><pre>"
-      <> escape_html(to_string(a))
-      <> "</pre></li>"
-    NewOnly(a) ->
-      "<li class=\"diff diff-added\"><pre>"
-      <> escape_html(to_string(a))
-      <> "</pre></li>"
-    Different(old_a, new_a) -> "<li class=\"diff diff-changed\">
-        <pre class=\"diff-removed\">" <> escape_html(to_string(old_a)) <> "</pre>
-        <pre class=\"diff-added\">" <> escape_html(to_string(new_a)) <> "</pre>
-      </li>"
-    Same(a) ->
-      "<li class=\"diff diff-same\"><pre>"
-      <> escape_html(to_string(a))
-      <> "</pre></li>"
+  let #(class, contents) = case diff {
+    OldOnly(a) -> #("removed", individual_diff_html(RemoveKind, a, to_string))
+    NewOnly(a) -> #("added", individual_diff_html(AddKind, a, to_string))
+    Different(old_a, new_a) -> #(
+      "changed",
+      individual_diff_html(RemoveKind, old_a, to_string)
+        <> individual_diff_html(AddKind, new_a, to_string),
+    )
+    Same(a) -> #("unchanged", individual_diff_html(SameKind, a, to_string))
   }
+
+  "<li class=\"diff " <> class <> "\">" <> contents <> "</li>"
+}
+
+type DiffKind {
+  AddKind
+  RemoveKind
+  SameKind
+}
+
+fn individual_diff_html(
+  kind: DiffKind,
+  item: a,
+  to_string: fn(a) -> String,
+) -> String {
+  let #(class, indicator) = case kind {
+    AddKind -> #("add", "+")
+    RemoveKind -> #("remove", "-")
+    SameKind -> #("same", " ")
+  }
+
+  let indicator_html =
+    "<span class=\"" <> class <> " indicator\">" <> indicator <> "</span>"
+
+  let content = item |> to_string |> escape_html
+  let content_html =
+    "<pre class=\"" <> class <> " content\">" <> content <> "</pre>"
+
+  indicator_html <> content_html
 }
 
 type DiffSummary {
@@ -228,18 +260,50 @@ fn error_to_html(error: main.Error) -> String {
     main.ParseError(error:, source: _) -> parse.error_to_string(error)
   }
 
-  let maybe_source_element = case error {
-    main.ParseError(error: _, source:) ->
-      "<pre class=\"source\">" <> escape_html(source) <> "</pre>"
-    _ -> ""
+  let #(maybe_controls_section, maybe_source_element) = case error {
+    main.ParseError(error: _, source:) -> #(
+      error_controls_section(),
+      "<pre class=\"source\">" <> escape_html(source) <> "</pre>",
+    )
+    _ -> #("", "")
   }
 
-  "
-  <div class=\"error\">
+  maybe_controls_section <> "
+  <section class=\"error\">
     <p class=\"message\">
       " <> error_str <> "
     </p>
     " <> maybe_source_element <> "
+  </section>
+  "
+}
+
+fn error_controls_section() {
+  "
+  <section class=\"controls\">
+    " <> checkbox("Show Source", False) <> "
+  </section>
+  "
+}
+
+fn checkbox(name: String, checked: Bool) -> String {
+  let class =
+    name
+    |> string.trim
+    |> string.lowercase()
+    |> string.replace(each: " ", with: "-")
+
+  let input_name = class <> "-input"
+
+  let checked_attr = case checked {
+    True -> "checked"
+    False -> ""
+  }
+
+  "
+  <div class=\"" <> class <> "\">
+    <input type=\"checkbox\" id=\"" <> input_name <> "\" name=\"" <> input_name <> "\" " <> checked_attr <> " />
+    <label for=\"" <> input_name <> "\">" <> name <> "</label>
   </div>
   "
 }
