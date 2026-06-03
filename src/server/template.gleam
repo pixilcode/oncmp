@@ -13,8 +13,17 @@ import gleam/order
 import gleam/string
 import server/style
 
-pub fn page(output: Result(main.Output, main.Error)) -> String {
-  let body = body_from(output)
+pub type Config {
+  Config(
+    show_params_default: Bool,
+    show_tests_default: Bool,
+    show_unchanged_default: Bool,
+    show_error_source_default: Bool,
+  )
+}
+
+pub fn page(output: Result(main.Output, main.Error), config: Config) -> String {
+  let body = body_from(output, config)
 
   "
   <!DOCTYPE html>
@@ -43,10 +52,13 @@ const head = "
   </style>
   "
 
-fn body_from(output: Result(main.Output, main.Error)) -> String {
+fn body_from(
+  output: Result(main.Output, main.Error),
+  config: Config,
+) -> String {
   let main_sections = case output {
-    Ok(output) -> output_to_html(output)
-    Error(error) -> error_to_html(error)
+    Ok(output) -> output_to_html(output, config)
+    Error(error) -> error_to_html(error, config)
   }
 
   "
@@ -57,8 +69,8 @@ fn body_from(output: Result(main.Output, main.Error)) -> String {
   "
 }
 
-fn output_to_html(output: main.Output) -> String {
-  output_controls_section() <> "
+fn output_to_html(output: main.Output, config: Config) -> String {
+  output_controls_section(config) <> "
   <section class=\"params\">
     <h2>Parameters</h2>
   " <> params_diff_to_html(output.param_diffs) <> "
@@ -70,12 +82,12 @@ fn output_to_html(output: main.Output) -> String {
   "
 }
 
-fn output_controls_section() {
+fn output_controls_section(config: Config) {
   "
   <section class=\"controls\">
-    " <> checkbox("Show Parameters", True) <> "
-    " <> checkbox("Show Tests", True) <> "
-    " <> checkbox("Show Unchanged", False) <> "
+    " <> checkbox("Show Parameters", config.show_params_default) <> "
+    " <> checkbox("Show Tests", config.show_tests_default) <> "
+    " <> checkbox("Show Unchanged", config.show_unchanged_default) <> "
   </section>
   "
 }
@@ -252,7 +264,7 @@ fn value_to_string(value: ParamValue) -> String {
   }
 }
 
-fn error_to_html(error: main.Error) -> String {
+fn error_to_html(error: main.Error, config: Config) -> String {
   let error_str = case error {
     main.ConfigError(error:) -> config.error_to_string(error)
     main.ActorError(error:) -> error
@@ -262,7 +274,7 @@ fn error_to_html(error: main.Error) -> String {
 
   let #(maybe_controls_section, maybe_source_element) = case error {
     main.ParseError(error: _, source:) -> #(
-      error_controls_section(),
+      error_controls_section(config),
       "<pre class=\"source\">" <> escape_html(source) <> "</pre>",
     )
     _ -> #("", "")
@@ -278,10 +290,10 @@ fn error_to_html(error: main.Error) -> String {
   "
 }
 
-fn error_controls_section() {
+fn error_controls_section(config: Config) {
   "
   <section class=\"controls\">
-    " <> checkbox("Show Source", False) <> "
+    " <> checkbox("Show Source", config.show_error_source_default) <> "
   </section>
   "
 }
