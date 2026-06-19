@@ -23,5 +23,4 @@ pub fn main() -> Nil {
     True -> server_main.run(args)
     False -> cli_main.run(args)
   }
-  cli_main.run(args)
 }
