@@ -232,22 +232,16 @@ pub fn parse_new_output(output: String) -> Result(Output, Error) {
 
   // expect 4 sections
   //
-  //     <empty>
-  //     ---------------
-  //     <model header>
-  //     ---------------
   //     <params>
   //     ---------------
   //     <tests>
   //
   // we say 3 because that's what the user will perceive visually
-  use <- bool.lazy_guard(list.length(sections) != 4, fn() {
-    Error(NewOutputWrongSectionCount(
-      section_count: sections |> list.length |> int.subtract(1),
-    ))
+  use <- bool.lazy_guard(list.length(sections) != 2, fn() {
+    Error(NewOutputWrongSectionCount(section_count: list.length(sections)))
   })
 
-  let assert [_empty, _model_header, params, tests] = sections
+  let assert [params, tests] = sections
 
   // try to parse the params
   use params <- result.try(
@@ -467,7 +461,7 @@ pub fn error_to_string(error: Error) -> String {
       <> string.inspect(line)
       <> ")"
     NewOutputWrongSectionCount(section_count:) ->
-      "expected 3 sections (model header, params, tests), got "
+      "expected 2 sections (params, tests), got "
       <> int.to_string(section_count)
     NewParamMissingEquals(line:) ->
       "error splitting param on '=' for string: " <> string.inspect(line)
