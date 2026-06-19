@@ -3,7 +3,9 @@ import gleam/dict
 import gleam/float
 import gleam/list
 import gleam/result
+import util
 
+import core/float_ext.{type FloatExt}
 import core/parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
   type TestResult, EmptyInterval, Fail, Interval, Pass, Scalar, String,
@@ -182,8 +184,11 @@ fn value_is_close(a: ParamValue, b: ParamValue) -> Bool {
   }
 }
 
-fn is_close(a: Float, b: Float) -> Bool {
+fn is_close(a: FloatExt, b: FloatExt) -> Bool {
   use <- bool.guard(when: a == b, return: True)
+
+  use a <- util.try_or_return(float_ext.to_float(a), False)
+  use b <- util.try_or_return(float_ext.to_float(b), False)
 
   let assert Ok(tolerance) = float.power(10.0, -3.0)
 

@@ -1,5 +1,5 @@
+import core/float_ext.{type FloatExt}
 import gleam/bool
-import gleam/float
 import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
@@ -26,8 +26,8 @@ pub type Error {
   NewTestDependencyParamMissingEquals(line: String)
   InvalidInterval(
     value: String,
-    min: Result(Float, Nil),
-    max: Result(Float, Nil),
+    min: Result(FloatExt, Nil),
+    max: Result(FloatExt, Nil),
   )
 }
 
@@ -41,8 +41,8 @@ pub type Param {
 }
 
 pub type ParamValue {
-  Scalar(value: Float)
-  Interval(min: Float, max: Float)
+  Scalar(value: FloatExt)
+  Interval(min: FloatExt, max: FloatExt)
   EmptyInterval
   String(value: String)
 }
@@ -305,9 +305,7 @@ fn parse_new_test_group(group: String) -> Result(List(Test), Error) {
   use #(model, rest) <- result.try(
     group
     |> string.split_once(on: ".on\n")
-    |> result.map_error(fn(_error) {
-      NewTestGroupMissingModelDelimiter(group:)
-    }),
+    |> result.map_error(fn(_error) { NewTestGroupMissingModelDelimiter(group:) }),
   )
 
   let model = model |> string.trim()
@@ -400,15 +398,9 @@ fn parse_param_value(value: String) -> Result(ParamValue, Error) {
     Ok(#(min, max)) -> {
       // try to parse as float, if that fails, try to
       // parse as int and convert to float
-      let min =
-        min
-        |> string.trim()
-        |> parse_int_or_float()
+      let min = float_ext.parse(min)
 
-      let max =
-        max
-        |> string.trim()
-        |> parse_int_or_float()
+      let max = float_ext.parse(max)
 
       case min, max {
         Ok(min), Ok(max) -> Ok(Interval(min: min, max: max))
@@ -422,7 +414,7 @@ fn parse_param_value(value: String) -> Result(ParamValue, Error) {
       case value {
         "<empty>" -> Ok(EmptyInterval)
         _ -> {
-          case value |> parse_int_or_float() {
+          case float_ext.parse(value) {
             Ok(value) -> Ok(Scalar(value: value))
             Error(Nil) -> Ok(String(value: parse_string(value)))
           }
@@ -436,28 +428,6 @@ fn parse_string(value: String) -> String {
   value
   |> string.trim()
   |> string.replace(each: "'", with: "")
-}
-
-fn parse_int_or_float(value: String) -> Result(Float, Nil) {
-  let has_e = value |> string.contains("e")
-  let has_decimal = value |> string.contains(".")
-
-  let value = case has_e && !has_decimal {
-    True -> {
-      value |> string.replace(each: "e", with: ".0e")
-    }
-    False -> value
-  }
-
-  value
-  |> string.trim()
-  |> float.parse()
-  |> result.lazy_or(fn() {
-    value
-    |> string.trim()
-    |> int.parse()
-    |> result.map(int.to_float)
-  })
 }
 
 pub fn error_to_string(error: Error) -> String {

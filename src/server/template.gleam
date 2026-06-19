@@ -1,12 +1,12 @@
 import core/config
 import core/diff.{type Diff, Different, NewOnly, OldOnly, Same}
+import core/float_ext
 import core/main
 import core/parse.{
   type Param, type ParamValue, type Test, type TestDependencyParam,
   EmptyInterval, Fail, Interval, Pass, Scalar, String,
 }
 import core/run
-import gleam/float
 import gleam/int
 import gleam/list
 import gleam/order
@@ -257,9 +257,10 @@ fn test_dependency_param_to_string(param: TestDependencyParam) -> String {
 
 fn value_to_string(value: ParamValue) -> String {
   case value {
-    Scalar(value) -> float.to_string(value)
+    Scalar(value) -> float_ext.to_string(value)
     EmptyInterval -> "<empty>"
-    Interval(min, max) -> float.to_string(min) <> " | " <> float.to_string(max)
+    Interval(min, max) ->
+      float_ext.to_string(min) <> " | " <> float_ext.to_string(max)
     String(value) -> "'" <> value <> "'"
   }
 }
