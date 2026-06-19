@@ -135,6 +135,8 @@ pub const styles = "
 
   .error .source {
     padding: 0 1rem;
+    max-width: 80vw;
+    overflow: scroll;
   }
 
   /* controls */
@@ -151,7 +153,7 @@ pub const styles = "
     display: grid;
   }
 
-  main:has(#show-source-input:not(checked)) .error .source {
+  main:has(#show-source-input:not(:checked)) .error .source {
     display: none;
   }
   "
