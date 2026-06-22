@@ -20,6 +20,8 @@ pub const styles = "
 
     --bkg-green: #e5ffe5;
     --txt-green: #0a660a;
+
+    --max-page-width: 75vw;
   }
 
   * {
@@ -45,6 +47,7 @@ pub const styles = "
   main {
     border: 2px solid var(--border-purple);
     padding: 1rem 2rem;
+    max-width: var(--max-page-width);
   }
 
   h1 {
@@ -116,6 +119,7 @@ pub const styles = "
   .diff .content {
     grid-column: 2;
     padding-right: 0.5rem;
+    overflow: scroll;
   }
 
   .summary {
@@ -135,7 +139,6 @@ pub const styles = "
 
   .error .source {
     padding: 0 1rem;
-    max-width: 80vw;
     overflow: scroll;
   }
 
