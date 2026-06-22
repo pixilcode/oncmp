@@ -30,7 +30,7 @@ pub fn run_new(new_repo: String, model_file: String) -> Result(String, Error) {
     <> "cd model/ && "
     <> "oneil eval "
     <> model_file
-    <> " --print all --cache-overwrite always && "
+    <> " --print all --cache-overwrite always --ignore-failing-tests && "
     <> "oneil test "
     <> model_file
     <> " --recursive --cache-overwrite always "
